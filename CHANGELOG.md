@@ -1,0 +1,76 @@
+# v0.8.4. Start in your guide
+
+- New owner guides and invitation responses open the existing editor, with all categories visible and Eat selected for an empty guide.
+- Give each empty category one friendly EN/PL prompt and Find a place action. Keep the blank guide-level note collapsed and remove the competing floating add action in empty categories.
+- Preserve the chosen category during search. Save the added place before returning to its real editor row, with focus and optional notes/stars. Existing duplicates retain their original category and writing.
+- Retain guest context, local draft recovery, cloud save retries, legacy categories and direct Add places routes. Preview and Share/Finish require one place.
+- Include both earlier small patches: smoother star movement with reduced-motion support, and positive spacing for place-search attribution. Keep bottom controls, map footer behavior and sharing refinements.
+- Isolate DOM search tests from local API settings and use bounded result waits. Add six owner/guest/editor flow checks in EN/PL.
+- 104 automated cases and production build pass. No new migrations, dependency changes, environment settings or deployment. Real mobile layout and hosted sharing still require device acceptance.
+
+# v0.8.3. Cleaner sharing
+
+- Send one plain-text payload, with deliberate paragraphs and one link, through native sharing and clipboard. Keep native cancellation behavior.
+- Shorten new invitation links with server-generated 12-character codes. Preserve UUID links, query invitations, retry keys, approved names, anonymous context, quotas and original draft identities.
+- Add migration 0010: backfill existing records, enforce format/uniqueness, retry code collisions and expose a public-by-link lookup without revealing account IDs or private keys.
+- Add EN/PL branded 1200×630 PNG cards. Render public preview metadata in initial HTML for all visitors rather than relying on crawler user-agent detection. Keep draft/private-route exclusion, escaping and public-key RLS lookups.
+- Preserve the approved bottom-controls CSS patch. The change-only archive does not replace CSS or other unrelated manual edits.
+- 98 automated cases pass. Production build passes. No live migration/deployment or real-device messenger acceptance performed.
+
+# v0.8.2. Stored invitations
+
+- Give new invitations independent server-generated UUIDs and `/request/<id>` links. Keep owner UUIDs, names, city, locale, creation retry keys and recovery keys out of the public URL.
+- Store minimal context in a private RLS-enabled table with no browser listing/direct writes. Add bounded creation and ID-only read RPCs; identity comes from the authenticated session.
+- Snapshot approved account names and support optional anonymous guest names. Reuse unchanged-form links after retries, preview and share cancellation; discard stale account-change responses.
+- Use the agreed Polish named/anonymous headings and uninflected destination label from shared EN/PL copy.
+- Resume new guest drafts by invitation ID; preserve legacy name/city indexes and old invitation URLs. Retain anonymous context through sign-in and publication. Keep public invitation and private recovery capabilities separate.
+- Use the same record for browser and Netlify crawler previews, with escaped text, canonical links and no query-field override.
+- Migration 0009 is additive; all earlier migration bytes, dependencies, CSS, map/drag/footer fixes and guide behavior remain unchanged.
+- Update privacy wording to reflect stored invitation records. No automatic expiry, notifications, inbox or deployment.
+- 87 automated cases and production build pass. Real-phone sharing/rendering, live PostgREST/auth and hosted previews remain acceptance checks.
+
+# v0.8.1. Warmer copy
+
+- Refine 70 interface strings across EN/PL, keeping useful instructions and the author’s voice.
+- Add a decorative fire emoji to the author-picks explanation and a sparkle to a completed, shareable invitation guide. Meaning stays in text; emoji are hidden from assistive technology.
+- Warm owner share messages, invitation messages and invitation crawler descriptions using the existing shared module. Preserve note excerpts, escaping, aliases and language hints.
+- Replace the recent-add “Saved automatically” sentence with optional-note/next-place guidance. The existing save indicator remains responsible for reporting actual save status.
+- Keep the reopened Draft heading neutral and align the Polish privacy page’s Explore label with navigation.
+- Preserve the first-guide flow, star ordering, map icons, layout, manual UI fixes and all database migrations. No em dashes in system copy; author-written text is untouched.
+- Version package and lockfile as 0.8.1. No new features, dependencies, environment variables or SQL.
+- Run the existing 68-case suite and production build; see docs/verification.md for release results and limits.
+
+# v0.8.0. First guides and author picks
+
+- New account guides and invitation responses open guided place search directly. Brief guidance, optional notes and Preview/Open guide/Finish actions help authors share a small useful guide.
+- Authors can star multiple recommendations. Stars sort first within each category, appear beside names and on the existing map pins, and remain separate from reader Saved Guides.
+- Underlying author order survives toggles. Reordering stays within a category and star group; category moves keep the star.
+- Additive migration 0008 extends owner saves and atomic guest publication. Existing guides and old guest snapshots remain unstarred; old migration files are unchanged.
+- Crawler HTML substitutions keep dollar replacement sequences in authored text literal while escaping markup.
+- EN/PL sharing is personal, owner-aware and shared with crawler metadata. Guide links retain aliases and carry a language hint. Author-written notes are untouched. System copy avoids em dashes.
+- Carry forward the requested 3px drag-handle adjustment and removal of Ask for recommendations from Your guides.
+- 68 automated cases and TypeScript/Vite build pass. Browser/phone rendering, live auth and hosting still require acceptance checks.
+- No dependency upgrades, new environment variables or live migration/deployment.
+
+# v0.7.1. UI patch
+
+- New guide and floating Add place use centred text without plus icons.
+- Email sign-in uses a plain full-width field, with consistent inset and visible focus.
+- Drag glyph aligns with the first place-title line; the 40px tap area remains.
+- Ask for recommendations has a light terracotta background and darker label.
+- Full-page load/crash/missing-draft errors offer only Home; inline save/recovery retries remain.
+- Actual Saved Guides route is checked without cloud credentials, including removing a shortcut. Saved lists remain browser/origin-local.
+- 51 automated cases pass, including four new interaction regressions; TypeScript/Vite build passes. Current browser/phone/live-auth QA remains outstanding.
+- No migration, environment variable, production dependency change, new feature or external deployment.
+
+# v0.7.0. refinement
+
+- Serial, recoverable cloud saves; all pending edits flush before leaving or sharing, with truthful status and Retry.
+- Atomic ordering/category/note/removal batches; deterministic category moves and shared editing helpers.
+- Additive migration 0007 protects unapproved names and callable permissions, scopes new POIs and bounds writes/storage while preserving historical data.
+- Native labelled dialogs with focus entry/loop/restoration and reachable controls for long notes.
+- Visible guest Finish action and consistent one-place requirement.
+- EN/PL status, error and accessibility copy; locale distance formatting, Maps coordinate fallback, stale-search and duplicate-action guards.
+- Narrow-header/long-text reflow, balanced Home grid, improved control targets/contrast and reduced motion. Original map/footer behavior remains the design baseline.
+- Targeted CSS consolidation, route/auth failure containment, recovery-key/header policy and factual privacy configuration.
+- 47 automated cases and a passing production build. Current visual/browser QA remains outstanding because the renderer could not launch. No new product features or external deployment.
