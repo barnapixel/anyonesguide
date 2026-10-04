@@ -1284,8 +1284,28 @@ h1[tabindex="-1"]:focus, .editor-title strong[tabindex="-1"]:focus, .add-topbar 
 
 
 /* The same editor teaches the first recommendation and edits the next ones. */
-.editor-chips .guide-chip-row { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 7px; }
-.editor-chips .guide-chip-row .chip { flex: 0 1 auto; width: auto; padding: 9px 13px; min-height: 40px; }
+.editor-chips .guide-chip-row {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: 7px;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  padding: 3px;
+  scroll-padding-inline: 3px;
+  scrollbar-width: thin;
+}
+.editor-chips .guide-chip-row .chip {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 9px 13px;
+  min-height: 44px;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
 .editor-empty-prompt { padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--white); }
 .editor-empty-question { margin: 0; font: 24px/1.25 Georgia, 'Times New Roman', serif; color: var(--ink); overflow-wrap: anywhere; }
 .editor-empty-hint { margin: 12px 0 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
@@ -1295,6 +1315,10 @@ h1[tabindex="-1"]:focus, .editor-title strong[tabindex="-1"]:focus, .add-topbar 
 .editor-guide-note summary::-webkit-details-marker { display: none; }
 .editor-guide-note-heading strong { font: bold 19px/1.25 Georgia, 'Times New Roman', serif; }
 .editor-guide-note-heading span { display: inline-flex; align-items: center; gap: 6px; }
+.editor-guide-note-heading .editor-guide-note-copy { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; gap: 6px; color: var(--ink); }
+.editor-guide-note-heading .editor-guide-note-meta { flex: none; white-space: nowrap; }
+.editor-guide-note .editor-guide-note-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; margin: 0; color: var(--muted); font: 13px/1.45 Inter, ui-sans-serif, sans-serif; white-space: pre-wrap; }
+.editor-guide-note[open] .editor-guide-note-preview { display: none; }
 .editor-guide-note[open] summary svg { transform: rotate(180deg); }
 .editor-guide-note-content { padding: 0 16px 16px; }
 .editor-guide-note summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 15px; }

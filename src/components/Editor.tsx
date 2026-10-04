@@ -68,7 +68,7 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
   const lastDragTargetRef = useRef<string | null>(null)
   const activePointerIdRef = useRef<number | null>(null)
   const editorRef = useRef<HTMLElement | null>(null)
-  const [noteOpen, setNoteOpen] = useState(() => Boolean(guide.guideNote.trim()))
+  const [noteOpen, setNoteOpen] = useState(false)
   const empty = guide.places.length === 0
   const firstPlaceScope = `${guestMode ? 'guest' : guide.ownerId ? 'owner:' + guide.ownerId : 'local'}:${guide.id}`
   const [starting, setStarting] = useState(() => empty || Boolean(loadFirstPlaceDraft(firstPlaceScope)?.selected))
@@ -259,11 +259,17 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
   const emptyCategory = guide.categories.find(item => item.id === category)
     ?? guide.categories.find(item => item.id === 'eat') ?? guide.categories[0]
   const guideNote = <details className="editor-guide-note" open={noteOpen} onToggle={event => setNoteOpen(event.currentTarget.open)}>
-    <summary className="editor-guide-note-heading"><strong>{t('editor.guideNoteLabel')}</strong><span>{t('editor.guideNoteOptional')} <ChevronDown size={15} aria-hidden="true" /></span></summary>
+    <summary className="editor-guide-note-heading">
+      <span className="editor-guide-note-copy">
+        <strong>{t('editor.guideNoteLabel')}</strong>
+        <small className="editor-guide-note-preview" aria-hidden={Boolean(guide.guideNote.trim())}>{guide.guideNote.trim() ? guide.guideNote : t('editor.guideNotePlaceholder')}</small>
+      </span>
+      <span className="editor-guide-note-meta">{!guide.guideNote.trim() && t('editor.guideNoteOptional')} <ChevronDown size={15} aria-hidden="true" /></span>
+    </summary>
     <div className="editor-guide-note-content">
       <label className="sr-only" htmlFor="guide-note">{t('editor.guideNoteLabel')}</label>
-      <p>{t('editor.guideNoteHelp')}</p>
-      <textarea id="guide-note" rows={4} value={guide.guideNote} maxLength={guestMode ? 10000 : undefined} onChange={event => onUpdateGuideNote(event.target.value)} placeholder={t('editor.guideNotePlaceholder')} />
+      <p id="guide-note-help">{t('editor.guideNoteHelp')}</p>
+      <textarea id="guide-note" aria-describedby="guide-note-help" rows={3} value={guide.guideNote} maxLength={guestMode ? 10000 : undefined} onChange={event => onUpdateGuideNote(event.target.value)} placeholder={t('editor.guideNotePlaceholder')} />
     </div>
   </details>
 
@@ -282,7 +288,7 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
     onBack={async () => { await onFlushGuideNote?.(); onNavigate(backPath) }}
     onSave={onSaveFirstPlace}
     onSaved={place => {
-      setCategory(place.categoryId)
+      setCategory('all')
       setFirstSavedId(place.id)
       setNotice(t(guestMode || !guide.ownerId ? 'first.localSaved' : 'first.saved'))
       setStarting(false)

@@ -72,7 +72,7 @@ test('first-place search starts without categories, repeated instructions or pre
   globalThis.__start = { routes: [] }
   for (const [locale, question, examples] of [
     ['en', 'What’s one place you’d recommend?', 'Great coffee, a favourite meal, or a spot worth seeing.'],
-    ['pl', 'Jakie miejsce polecisz znajomym?', 'Dobra kawa, ulubiony posiłek albo miejsce, które warto zobaczyć.'],
+    ['pl', 'Co polecisz znajomym?', 'Dobra kawa, ulubiony lokal albo miejsce, które warto zobaczyć.'],
   ]) {
     await act(async () => root.render(null))
     localStorage.setItem('anyones-guide:locale', locale)
@@ -121,6 +121,8 @@ test('a guest explicitly saves an inline selection and note, then sees the real 
   assert.match(document.querySelector('[role="status"]').textContent, /saved on this device/)
   assert.ok(document.querySelector('.floating-add'))
   assert.equal(document.querySelector('.editor-guide-note').open, false)
+  assert.equal(chip('All').getAttribute('aria-pressed'), 'true')
+  assert.match(document.querySelector('.editor-guide-note-preview').textContent, /first visit/)
   assert.deepEqual(globalThis.__start.routes, [])
   await click(document.querySelector('.author-star-button'))
   await act(async () => root.render(null))
@@ -151,7 +153,7 @@ test('failed first saves retain the selected place and note; retry saves the inf
   assert.equal(current.places[0].categoryId, 'coffee')
   assert.equal(current.places[0].note, 'Do not lose this')
   assert.ok(document.querySelector('.editor-row'))
-  assert.equal(chip('Coffee').getAttribute('aria-pressed'), 'true')
+  assert.equal(chip('All').getAttribute('aria-pressed'), 'true')
   assert.ok([...document.querySelectorAll('.editor-top-actions button')].every(button => !button.disabled))
   assert.deepEqual(globalThis.__start.routes, [])
 })
@@ -160,6 +162,9 @@ test('the prompt waits for pending owner notes and a failed save keeps the edito
   const current = { ...guide(), guideNote: 'Existing context', places: [{ ...result, id: 'existing', guidePlaceId: crypto.randomUUID(), categoryId: 'eat', note: '', sortOrder: 0 }] }
   globalThis.__start = { guide: current, adds: [], saves: [], routes: [], failSave: true }
   await render(CloudEditorPage, cloudProps(current, 'edit', '?category=coffee'))
+  assert.equal(document.querySelector('.editor-guide-note').open, false)
+  assert.equal(document.querySelector('.editor-guide-note-preview').textContent, 'Existing context')
+  await click(document.querySelector('.editor-guide-note summary'))
   assert.equal(document.querySelector('.editor-guide-note').open, true)
   await change(document.querySelector('#guide-note'), 'Keep this updated note')
   await click(document.querySelector('.editor-empty-prompt button'))
@@ -306,7 +311,7 @@ test('choosing another result stays inline and discards the old category bias wi
   await click(await waitFor('.search-results button'))
   await click(document.querySelector('.first-place-save'))
   assert.equal(loadGuestDraft(draft.id).guide.places[0].categoryId, 'coffee')
-  assert.equal(chip('Coffee').getAttribute('aria-pressed'), 'true')
+  assert.equal(chip('All').getAttribute('aria-pressed'), 'true')
   assert.equal(document.querySelector('.editor-place-title-row strong').textContent, result.name)
   assert.equal(document.querySelector('.editor-empty-prompt'), null)
   assert.deepEqual(globalThis.__start.routes, [])
