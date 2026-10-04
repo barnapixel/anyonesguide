@@ -7,6 +7,21 @@
 }
 
 * { box-sizing: border-box; }
+
+/* Keep field labels available to screen readers without repeating visible headings. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 html, body, #root { margin: 0; min-height: 100%; }
 #root { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
 .request-shell { flex: 1 0 auto; min-height: 0; display: flex; flex-direction: column; }
