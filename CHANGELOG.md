@@ -1,3 +1,12 @@
+# v0.8.4 inline first-place patch
+
+- Replace the empty guide’s categories, repeated encouragement and disabled completion actions with one question, concrete examples and inline search in EN/PL.
+- Keep search and selection on the same route. Show a selected-place card, optional note, Choose another place and one explicit Save place action.
+- Save only after the author presses Save. Infer a supported category through the existing store behavior. Then show the regular editor with the real row focused and a truthful cloud/device confirmation.
+- Recover unfinished selections and exact author text using bounded, scoped device checkpoints with a seven-day recovery limit. Clear the checkpoint after success. Report blocked storage and do not claim a durable guest save after failure.
+- Preserve original guide-level writing, retry failed/partial cloud saves without duplicating a place, guard repeated taps and retain the latest note across reopening. Existing editor autosave and guest Finish/publication stay unchanged.
+- 114 automated cases and production build pass. No new SQL, dependency, auth redirect or hosting change. Local Chromium launch failed; actual phone keyboard/layout acceptance remains.
+
 # v0.8.4. Start in your guide
 
 - New owner guides and invitation responses open the existing editor, with all categories visible and Eat selected for an empty guide.

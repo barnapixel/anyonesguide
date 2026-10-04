@@ -1,31 +1,29 @@
-# Anyone’s Guide v0.8.4 handover
+# Anyone’s Guide v0.8.4 current handover
 
-Actual package and lockfile version: **0.8.4**. This is a complete source archive, built from the v0.8.3 sharing release plus its star-motion and search-spacing patches. Read [v0.8.3](anyones-guide-handover-v0.8.3.md) and [v0.8.2](anyones-guide-handover-v0.8.2.md) for retained architecture and earlier decisions. This document overrides their first-guide behavior and patch-only delivery instructions.
+Actual package and lockfile version: **0.8.4**. Current source includes the full v0.8.4 release, first-place encouragement patch and latest inline-first-place patch. The latest patch overrides earlier category-led empty-guide decisions. Read v0.8.3/v0.8.2 handovers for retained architecture/sharing behavior, and [the current upgrade](../UPGRADE-v0.8.4-inline-first-place.md) for delivery scope.
 
-## Product decisions
+## Current first-place experience
 
-Use one editor that adapts to content. New owner guides and invitation responses open there, not in a blank search screen. All existing categories are shown, with Eat initially selected when empty. Show one real category heading and one prompt card. Eat asks where you would take your friends for dinner. Other categories have their own questions. Find a place is the clear primary action. One good recommendation is enough to start.
+Use the existing editor route with an adaptive first-place state. Empty owner guides and guest responses show the city, compact requester context when applicable, one broad question, three memory cues and inline search. Hide category chips, Eat headings, Preview/Finish and guide-level notes. No automatic keyboard activation.
 
-Blank guide-level notes start collapsed. Existing authored notes open with their content intact. Keep notes and stars optional, no forced checklist, no fake recommendation records, no extra onboarding or sign-in requirements. Hide the floating Add place action when the active category has no places. Disable Preview and Share/Finish until one place exists. Keep the guest requester and destination context visible.
+Selecting a result stays on the same screen and shows its real name/address, Choose another place, an optional note and Save place. Selection does not add it to the guide. Save is the commitment. On success the editor shows the real saved row, focuses/scrolls to it and gives a first-save confirmation. Stars, categories, the optional guide-level note and subsequent adding/editing are available there. Guest confirmation is device-local; Finish/publication is separate. Removing all places returns to the first-place state while retaining existing guide writing.
 
-Keep the warm cream/green/terracotta design, familiar serif headings, simple controls and friendly EN/PL copy. System copy contains no em dashes. Never rewrite author notes or names. Preserve agreed Polish invitation headings and all existing sharing/privacy decisions.
+Keep the warm editorial design and natural EN/PL copy, no em dashes in system text, no fake venue records, forced checklist, extra sign-in, automatic sending or rewritten author notes. One recommendation is sufficient.
 
-## Implementation
+## Implementation and recovery
 
-`CategoryChips.showEmpty` is enabled only in the editor. Reader category navigation is unchanged. Editor chips wrap naturally on small screens. Prompts are `creation.prompt*`, `creation.findPlace` and `creation.startEnough` in `src/i18n.tsx`; `src/utils/category.ts` chooses validated categories and safe prompt keys, including legacy Stay/custom categories.
+`src/components/FirstPlace.tsx` handles inline search/selection/manual saving; `Editor.tsx` keeps this state active through failed or partial saves. All actual owner, guest and demo callers provide `onSaveFirstPlace`. The normal AddPlaces flow remains for subsequent and historical direct additions.
 
-Editor search uses `?return=guide&category=<id>`. All three stores accept an optional validated category for `addSearchResult`; explicit author intent wins over provider inference. Existing duplicates return their original row/category without rewriting notes, stars or order. Successful search saves and returns to the editor with `category` and `added` hints, then focuses and scrolls to the actual title. These query fields are navigation hints, not capabilities or data records.
+`src/services/firstPlaceDraft.ts` checkpoints query/selection/exact note in local storage, with in-memory fallback and truthful warnings. Keys are scoped to owner/account+guide, one independent guest draft, or local demo guide. Data is validated/bounded, malformed coordinates/providers/text are rejected, recovery has a seven-day limit, and success clears only that scope. No auth credentials/private recovery capability is stored in this checkpoint. A selected checkpoint can recover an incomplete cloud first save even if the row was already created. Blocked storage does not falsely claim persistence.
 
-Cloud add failure keeps search open. Pending note edits flush before navigation and retain the existing Retry behavior. Guest storage warnings and local recovery remain truthful. Older direct Add places routes keep their recent-card behavior. No new SQL, API endpoint, dependency, auth redirect or environment variable is introduced.
+Cloud first Save uses the existing idempotent add RPC and durable note queue, with required flushing before showing success. The two writes are not one new atomic transaction. Partial failures retain the first-place task and latest note; retries reuse the row. Guest/local demo first Save requires a successful device write. Existing ordinary guest edits keep their memory fallback and storage warnings. All backend migrations/RLS/quotas and dependency pins remain unchanged.
 
-The supplied AuthorStar component includes the previously delivered smooth star movement: preserve focus, scroll an offscreen moved row into view, animate short visible movement and briefly highlight the row. Respect reduced motion and cancel outstanding animations. Search attribution uses a positive `8px 2px 14px` margin and wrapping, removing the former negative-margin overlap.
+After the first addition, category-aware search, duplicate protection, standard autosave, stars and drag ordering remain. The prior star-motion/search-credit patches, same-bottom List/Map controls, hidden map site footer, provider attribution, personal sharing, short links and static PNGs are preserved.
 
-Bottom controls remain 16px above the safe area in both list and map, with the site footer hidden on the map and provider credits visible. v0.8.3 short links, original UUID draft identities, plain-text sharing paragraphs and four static branded PNGs remain. The unchanged image asset names retain their v083 suffix deliberately.
+## Evidence and deliverable
 
-## Evidence and delivery
+114 automated cases pass. Ten added cases cover actual owner/guest explicit first saves, recovery, slow/repeated taps, partial note failures/latest writing, blocked guest storage, inline replacement, removing the final row, and fresh-module checkpoint bytes/scope/validation/cleanup. Earlier editor cases are adjusted for the intended new first-screen behavior. TypeScript/Vite production build passes with the existing lazy MapLibre warning. Dependencies were reused. Earlier SQL, sharing modules/assets and star-motion source are compared with the v0.8.4 baseline.
 
-104 automated cases pass, including six new actual owner/guest/editor flow tests with remote services replaced at their boundaries. DOM tests disable local env-file loading, and the bundled-search test uses fixed demo configuration plus a bounded result wait. This removes reliance on local API keys; it is not a claim about the precise cause of the previously reported Windows failure, whose full error was not supplied.
+No live database, deployment, auth/provider or phone share was performed. Two local Chromium launch attempts failed in this environment; do not claim actual browser geometry/keyboard verification. The upgrade includes a focused mobile acceptance check.
 
-TypeScript/Vite production build passes. Disposable PGlite tests execute existing migration, permission, star, invitation and short-code behavior. Dependencies were reused from the prior verified workspace. No new advisory scan, live provider/auth check, deployment or real-phone geometry test is claimed. See [verification](verification.md) for limits.
-
-Deliverable: `anyones-guide-v0.8.4.zip`, containing the full project under one matching folder, including source, tests, public assets, Netlify files, shared modules, ten unchanged migrations, lockfile and documentation. It excludes credentials, Git metadata, node_modules, dist, logs and build caches. On a working v0.8.3 database, no SQL is needed. Merge folder contents into the existing project, retaining local environment and Git settings. See [upgrade](../UPGRADE-v0.8.4.md).
+Deliverable: `anyones-guide-v0.8.4-inline-first-place-patch.zip`, containing project-relative changed/new source, tests and current documentation. Merge the entire patch into an existing complete v0.8.4 project. It is cumulative over the smaller encouragement patch and excludes secrets, Git metadata, dependencies, build output and unchanged SQL/assets. No SQL upgrade is needed on working v0.8.3/v0.8.4.

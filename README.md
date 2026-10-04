@@ -1,34 +1,32 @@
-# Anyone’s Guide v0.8.4
+# Anyone’s Guide v0.8.4. Inline first-place patch
 
-A category-led start inside the existing guide editor. New account guides and invitation responses open with all categories visible and Eat selected. One prompt asks where you would take your friends for dinner, with a clear Find a place action and a little reassurance. Other empty categories have their own prompts. There are no fake places, required checklists or extra onboarding screens.
+The first recommendation now starts with one friendly question and inline place search. No category is preselected, no keyboard opens automatically, and there are no premature Preview/Finish controls. Selecting a result stays on this screen, with its name, address and optional note. The explicit Save place button adds it to the guide. After a successful save, the normal editor shows the real row, focuses its title and confirms the first save.
 
-Searching from the editor adds to the selected category and returns to the actual recommendation row. Notes and stars are optional. The optional guide-level note starts collapsed when blank; existing authored notes remain intact. Empty categories use one inline action instead of a competing floating Add place button. Preview and Share/Finish become available after the first place.
+Unfinished selections and exact note text are recovered on the same device where storage is available. Checkpoints are scoped to an owner/account plus guide, or one independent guest draft, and have a seven-day recovery limit. Search/selection does not write a recommendation to the guide. Cloud saves use the existing add RPC and durable note queue; guest saves require a successful device write. Failed or partial saves retain the first-place task and Retry.
 
-This is the **complete source release**, including the smoother star movement and mobile search-credit spacing patches. It also retains v0.8.3 short invitation links, personal EN/PL sharing, branded previews and the consistent bottom List/Map controls. Dependencies and all ten SQL migrations are unchanged.
+This update builds on the complete v0.8.4 source and its first-place encouragement patch. Existing editing autosave, category-aware subsequent additions, stars, sharing, bottom controls, drafts and migration files remain. Package and lockfile remain **0.8.4**; no dependency or SQL update is introduced.
 
-## Upgrade from a working v0.8.3
+## Upgrade an existing v0.8.4 installation
 
-**No new SQL is required.** Merge the contents of `anyones-guide-v0.8.4/` into the existing project root. Keep `.env.local`, Git metadata and Netlify settings. Review any matching files you edited manually. The ZIP does not contain secrets, node_modules or dist.
+Merge the patch’s project-relative `src`, `tests` and documentation files into your existing project root, replacing matching files. Keep `.env.local`, Git metadata and Netlify settings. Review matching files if you edited them manually. The patch contains new components/services as well as replacements, so copy the entire patch, not just Editor.tsx.
 
 ```sh
-npm ci
 npm test
 npm run build
+npm run dev
 ```
 
-Deploy the complete source through your existing Netlify workflow. Keep `netlify/edge-functions/`, `shared/` and `public/social/` included. A dist-only upload does not update the Edge Function. See [UPGRADE-v0.8.4.md](UPGRADE-v0.8.4.md) for the short upgrade and mobile acceptance checks.
+If dependencies are not installed, run `npm ci` first. Deploy through your existing Netlify source workflow when ready. No new SQL, keys or auth redirects are needed on a working v0.8.3/v0.8.4 database. The short-link migration 0010 remains necessary only on an older database that has not already received it. Do not rerun earlier migrations or the private-schema repair on a working project.
 
-If your database is still on v0.8.2, apply only the missing **0010_short_invitation_links.sql** once before using short invitation URLs. On an older project, apply only missing migrations in order. Do not rerun the earlier private-schema repair on a working database. No new keys, dependencies or auth redirects are required.
-
-**104 automated cases and the TypeScript/Vite production build pass.** These are local checks, including disposable database fixtures. No live database change, deployment or real-phone test was performed. Messaging apps control their own wrapping, preview layout and caching.
+See [the inline-first-place upgrade](UPGRADE-v0.8.4-inline-first-place.md) for scope and acceptance checks. **114 automated cases and the TypeScript/Vite build pass.** The local Chromium runner could not start, so real viewport/keyboard behavior is not certified by these tests. No live deployment, database change, provider/auth test or phone share was performed.
 
 ## Copy locations
 
-Invitation headings, share messages and crawler wording have one source: **`shared/share-copy.mjs`**. Polish request headings are in `requestShareContent()`. The optional destination line and form/status labels are in **`src/i18n.tsx`**. Category prompts and their Find a place action are also in `src/i18n.tsx`, under `creation.prompt*`, `creation.findPlace` and `creation.startEnough`. The author-picks explanation remains `star.legend` there; its decorative fire emoji is in `PublicGuide.tsx`. Author-written names/notes are never translated or rewritten, and system copy avoids em dashes.
+Invitation headings, share messages and crawler wording have one source: **`shared/share-copy.mjs`**. Polish request headings are in `requestShareContent()`. The optional destination line and form/status labels are in **`src/i18n.tsx`**. First-place wording is in `src/i18n.tsx`, under `first.*`. Subsequent empty-category prompts remain under `creation.prompt*`, `creation.findPlace` and `creation.startEnough`. The author-picks explanation remains `star.legend` there; its decorative fire emoji is in `PublicGuide.tsx`. Author-written names/notes are never translated or rewritten, and system copy avoids em dashes.
 
 ## Features retained from v0.8
 
-- Account guides and invitation responses now start in the familiar editor. Explicit category intent is preserved during search. Selecting an existing place returns to its original category without duplicating it or rewriting its notes and stars. Historical direct Add places routes remain supported.
+- New account guides and invitation responses start with inline selection and one explicit first save. The normal editor follows. Subsequent additions retain category intent, duplicate protection and existing autosave. Historical direct Add places routes remain supported.
 - Authors can star places in the editor or immediately after adding them. Starred places appear first within their category in editing and reading, with a small star beside the name and on the map pin. Multiple stars are allowed. Stars belong to the guide entry, not the venue or reader.
 - Starring preserves underlying author order. Removing the star returns the place to that order. Dragging and Move up/down operate within the same category and star group. Category changes retain the star and append to the destination category’s underlying order.
 - Cloud stars use the existing durable save queue, retry and save-before-navigation behavior. Guest stars survive local reopen, recovery snapshots and publication. Older guides and guest drafts start unstarred.

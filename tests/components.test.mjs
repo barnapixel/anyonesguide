@@ -41,7 +41,7 @@ test('Editor waits for all saves before Preview and keeps the task open after fa
 })
 test('guest completion follows the one-place rule in the editor and public preview',async()=>{
  const empty={...guide,places:[]};localStorage.setItem('anyones-guide:language','pl')
- await render(React.createElement(Editor,{...editorProps,guide:empty,guestMode:true,shareLabel:'Gotowe'}));assert.equal(document.querySelectorAll('.editor-top-actions button')[1].disabled,true);assert.ok(document.getElementById('finish-help'))
+ await render(React.createElement(Editor,{...editorProps,guide:empty,guestMode:true,shareLabel:'Gotowe'}));assert.ok(document.querySelector('.first-place-screen'));assert.equal(document.querySelector('.editor-top-actions'),null);assert.equal(document.querySelector('.first-place-save'),null)
  await render(React.createElement(PublicGuide,{guide:empty,userLocation:null,locationStatus:'idle',onRequestLocation:noOp,onNavigate:noOp,topActionPath:'/finish',topActionLabel:'Gotowe',finishAction:true,trackUsage:false}));assert.equal(document.querySelector('.finish-action').disabled,true);assert.equal(document.querySelector('.finish-action span').textContent,'Gotowe')
 })
 test('place detail moves focus, traps Tab, handles cancellation and restores its opener',async()=>{

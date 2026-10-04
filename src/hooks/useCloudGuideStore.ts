@@ -72,6 +72,14 @@ export function useCloudGuideStore(guideId: string, userId: string) {
     if (ref.current) change({ ...ref.current, places: [...ref.current.places, place] })
     return place
   }
+  const saveFirstPlace = async (result: PlaceSearchResult, note: string) => {
+    const pending = ref.current?.places.find(p => p.externalId === result.id || p.name === result.name && p.address === result.address)
+    if (pending && pending.note !== note) updatePlace(pending.id, { note })
+    const place = await addSearchResult(result)
+    if (place.note !== note) updatePlace(place.id, { note })
+    await queue.flush()
+    return ref.current?.places.find(p => p.id === place.id) ?? place
+  }
   const setVisibility = async (visibility: GuideVisibility) => {
     await queue.flush(); await updateGuideVisibility(guideId, visibility)
     if (ref.current) change({ ...ref.current, visibility, isPublished: visibility !== 'draft' })
@@ -79,5 +87,5 @@ export function useCloudGuideStore(guideId: string, userId: string) {
   const saveStatusByPlaceId: Record<string, SaveStatus> = {}
   for (const edit of state.edits) if (edit.kind === 'place') saveStatusByPlaceId[edit.clientId] = state.status
   const reload = useCallback(() => setAttempt(v => v + 1), [])
-  return { guide, loading, error, reload, updatePlace, updateGuideNote, flushGuideNote: queue.flush, flushAll: queue.flush, guideNoteSaveStatus: state.status, saveStatus: state.status, storageUnavailable: state.edits.length > 0 && !state.durable, addSearchResult, removePlace, reorderPlace, movePlace, setVisibility, saveStatusByPlaceId }
+  return { guide, loading, error, reload, updatePlace, updateGuideNote, flushGuideNote: queue.flush, flushAll: queue.flush, guideNoteSaveStatus: state.status, saveStatus: state.status, storageUnavailable: state.edits.length > 0 && !state.durable, saveFirstPlace, addSearchResult, removePlace, reorderPlace, movePlace, setVisibility, saveStatusByPlaceId }
 }

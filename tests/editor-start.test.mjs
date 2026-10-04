@@ -45,8 +45,8 @@ before(async () => {
       if (id === '\0virtual:start-search') return `export const isLivePlaceSearchEnabled=true;export async function searchPlaces(){return [${JSON.stringify(result)}]};`
       if (id === '\0virtual:start-repository') return `
         export async function getGuideById(){return structuredClone(globalThis.__start.guide)}
-        export async function addPlaceToGuide(guide,result,categoryId){const f=globalThis.__start;f.adds.push({categoryId});if(f.failAdd)throw Error('offline');const place={...result,id:crypto.randomUUID(),guidePlaceId:crypto.randomUUID(),externalId:result.id,categoryId,note:'',sortOrder:0,isStarred:false};f.guide.places.push(place);return place}
-        export async function persistGuideEdits(id,edits){const f=globalThis.__start;f.saves.push(edits);if(f.failSave)throw Error('offline')}
+        export async function addPlaceToGuide(guide,result,categoryId){const f=globalThis.__start;f.adds.push({categoryId});if(f.failAdd)throw Error('offline');if(f.addWait)await f.addWait;const existing=f.guide.places.find(p=>p.externalId===result.id);if(existing)return existing;const place={...result,id:crypto.randomUUID(),guidePlaceId:crypto.randomUUID(),externalId:result.id,categoryId,note:'',sortOrder:0,isStarred:false};f.guide.places.push(place);return place}
+        export async function persistGuideEdits(id,edits){const f=globalThis.__start;f.saves.push(edits);if(f.failSave)throw Error('offline');for(const edit of edits){if(edit.kind==='guideNote')f.guide.guideNote=edit.value;else{const place=f.guide.places.find(p=>p.guidePlaceId===edit.linkId);if(place&&edit.note!==undefined)place.note=edit.note}}}
         export async function updateGuideVisibility(){}
       `
     },
@@ -68,95 +68,92 @@ before(async () => {
 afterEach(async () => { await act(async () => root.render(null)); localStorage.clear(); delete globalThis.__start })
 after(async () => { await act(async () => root.unmount()); await server.close(); dom.window.close() })
 
-test('the empty editor has every category, one Eat prompt, encouragement, no note panel and a single primary add action in EN/PL', async () => {
+test('first-place search starts without categories, repeated instructions or premature controls in EN/PL', async () => {
   globalThis.__start = { routes: [] }
-  for (const [locale, eat, question, coffee, coffeeQuestion] of [
-    ['en', 'Eat', 'Where would you take your friends for dinner?', 'Coffee', 'Where would you meet a friend for coffee?'],
-    ['pl', 'Jedzenie', 'Gdzie zabierzesz znajomych na kolację?', 'Kawa', 'Gdzie spotkasz się ze znajomymi na kawę?'],
+  for (const [locale, question, examples] of [
+    ['en', 'What’s one place you’d recommend?', 'Great coffee, a favourite meal, or a spot worth seeing.'],
+    ['pl', 'Jakie miejsce polecisz znajomym?', 'Dobra kawa, ulubiony posiłek albo miejsce, które warto zobaczyć.'],
   ]) {
     await act(async () => root.render(null))
     localStorage.setItem('anyones-guide:locale', locale)
     const current = { ...guide(), guideNote: 'Existing writing stays safe' }
-    await render(Editor, { ...editorProps(current), key: locale })
-    assert.equal(document.querySelectorAll('.editor-chips button').length, categories.length + 1)
-    assert.equal(chip(eat).getAttribute('aria-pressed'), 'true')
-    assert.equal(document.querySelector('.editor-empty-question').textContent, question)
+    await render(Editor, { ...editorProps(current), onSaveFirstPlace: async () => { throw Error('Save not expected') }, key: locale })
+    assert.equal(document.querySelector('.first-place-body h1').textContent, question)
+    assert.equal(document.querySelector('.first-place-examples').textContent, examples)
+    assert.equal(document.querySelector('.editor-chips'), null)
+    assert.equal(document.querySelector('.editor-top-actions'), null)
     assert.equal(document.querySelector('.editor-guide-note'), null)
     assert.equal(current.guideNote, 'Existing writing stays safe')
-    assert.equal(document.querySelector('.editor-body > .creation-hint').textContent, locale === 'en' ? 'Add the first place to start your guide!' : 'Dodaj pierwsze miejsce i zacznij tworzyć przewodnik!')
     assert.equal(document.querySelector('.floating-add'), null)
-    assert.equal(document.querySelectorAll('.editor-empty-prompt').length, 1)
-    assert.ok([...document.querySelectorAll('.editor-top-actions button')].every(button => button.disabled))
+    assert.equal(document.querySelector('.first-place-save'), null)
     assert.notEqual(document.activeElement.tagName, 'INPUT')
-    await click(chip(coffee))
-    assert.equal(document.querySelector('.editor-empty-question').textContent, coffeeQuestion)
-    await click(document.querySelector('.editor-empty-prompt button'))
-    const url = new URL(globalThis.__start.routes.at(-1), window.location.origin)
-    assert.equal(url.searchParams.get('category'), 'coffee')
-    assert.equal(url.searchParams.get('return'), 'guide')
-    await click(chip(locale === 'en' ? 'All' : 'Wszystkie'))
-    await click(document.querySelector('.editor-empty-prompt button'))
-    assert.equal(new URL(globalThis.__start.routes.at(-1), window.location.origin).searchParams.get('category'), 'eat')
+    await click(document.querySelector('.search-box input'))
+    assert.deepEqual(globalThis.__start.routes, [])
+    await change(document.querySelector('.search-box input'), 'cafe')
+    await click(await waitFor('.search-results button'))
+    assert.equal(document.querySelector('.first-place-body h1').textContent, question)
+    assert.equal(document.querySelector('.first-place-selected h2').textContent, result.name)
+    assert.equal(document.querySelectorAll('.first-place-save').length, 1)
+    assert.equal(current.places.length, 0)
+    assert.deepEqual(globalThis.__start.routes, [])
   }
 })
 
-test('a guest adds to the chosen category, returns to the real row with focus, and retains notes/stars on reopening', async () => {
+test('a guest explicitly saves an inline selection and note, then sees the real row with focus and retains stars on reopening', async () => {
   globalThis.__start = { routes: [] }
   const draft = createGuestDraft(destination, 'Boris', 'Warsaw', categories, crypto.randomUUID())
   saveGuestDraft(draft)
   await render(GuestResponsePage, guestProps(draft))
-  assert.match(document.querySelector('.request-draft-banner').textContent, /For Boris/)
-  await click(document.querySelector('.editor-empty-prompt button'))
-  const add = new URL(globalThis.__start.routes.at(-1), window.location.origin)
-  await render(GuestResponsePage, guestProps(draft, 'add', add.search))
+  assert.match(document.querySelector('.first-place-context').textContent, /For Boris/)
   await change(document.querySelector('.search-box input'), 'cafe')
   await click(await waitFor('.search-results button'))
-  const returned = new URL(globalThis.__start.routes.at(-1), window.location.origin)
-  assert.equal(returned.pathname, '/respond/' + draft.id)
-  assert.equal(returned.searchParams.get('category'), 'eat')
+  await change(document.querySelector('#first-place-note'), 'My own recommendation')
+  assert.equal(loadGuestDraft(draft.id).guide.places.length, 0)
+  assert.deepEqual(globalThis.__start.routes, [])
+  assert.equal(document.querySelector('.editor-row'), null)
+  await click(document.querySelector('.first-place-save'))
   const saved = loadGuestDraft(draft.id), place = saved.guide.places[0]
-  assert.equal(place.categoryId, 'eat') // explicit user intent overrides cafe inference
-  assert.equal(returned.searchParams.get('added'), place.id)
-  await render(GuestResponsePage, guestProps(draft, 'edit', returned.search))
-  assert.equal(document.querySelector('.editor-empty-prompt'), null)
-  assert.equal(document.querySelector('.editor-body > .creation-hint'), null)
-  assert.equal(document.querySelector('.editor-guide-note').open, false)
+  assert.equal(place.categoryId, 'coffee')
+  assert.equal(place.note, 'My own recommendation')
+  assert.equal(document.querySelector('.first-place-screen'), null)
   assert.equal(document.querySelector('.editor-place-title-row strong').textContent, result.name)
   assert.equal(document.activeElement, document.querySelector('.editor-place-title-row strong'))
+  assert.match(document.querySelector('[role="status"]').textContent, /saved on this device/)
   assert.ok(document.querySelector('.floating-add'))
-  await change(document.querySelector('.editor-place-copy textarea'), 'My own recommendation')
+  assert.equal(document.querySelector('.editor-guide-note').open, false)
+  assert.deepEqual(globalThis.__start.routes, [])
   await click(document.querySelector('.author-star-button'))
   await act(async () => root.render(null))
   await render(GuestResponsePage, guestProps(draft))
   const restored = loadGuestDraft(draft.id).guide.places[0]
   assert.equal(restored.note, 'My own recommendation')
   assert.equal(restored.isStarred, true)
-  await click(chip('Coffee'))
+  await click(chip('Eat'))
   assert.ok(document.querySelector('.editor-empty-prompt'))
   assert.equal(document.querySelector('.floating-add'), null)
 })
 
-test('cloud creation persists the chosen category before returning and failed adds stay in search', async () => {
+test('failed first saves retain the selected place and note; retry saves the inferred category before showing the editor', async () => {
   const current = guide()
   globalThis.__start = { guide: current, adds: [], saves: [], routes: [], failAdd: true }
   await render(CloudEditorPage, cloudProps(current))
-  await click(document.querySelector('.editor-empty-prompt button'))
-  const add = new URL(globalThis.__start.routes.at(-1), window.location.origin)
-  await render(CloudEditorPage, cloudProps(current, 'add', add.search))
   await change(document.querySelector('.search-box input'), 'cafe')
   await click(await waitFor('.search-results button'))
+  await change(document.querySelector('#first-place-note'), 'Do not lose this')
+  assert.equal(globalThis.__start.adds.length, 0)
+  await click(document.querySelector('.first-place-save'))
   assert.ok(document.querySelector('[role="alert"]'))
-  assert.equal(globalThis.__start.routes.length, 1)
   assert.equal(current.places.length, 0)
+  assert.equal(document.querySelector('#first-place-note').value, 'Do not lose this')
   globalThis.__start.failAdd = false
-  await click(document.querySelector('.search-results button'))
+  await click(document.querySelector('.first-place-save'))
   assert.equal(current.places.length, 1)
-  assert.equal(current.places[0].categoryId, 'eat')
-  const returned = new URL(globalThis.__start.routes.at(-1), window.location.origin)
-  await render(CloudEditorPage, cloudProps(current, 'edit', returned.search))
+  assert.equal(current.places[0].categoryId, 'coffee')
+  assert.equal(current.places[0].note, 'Do not lose this')
   assert.ok(document.querySelector('.editor-row'))
-  assert.equal(chip('Eat').getAttribute('aria-pressed'), 'true')
+  assert.equal(chip('Coffee').getAttribute('aria-pressed'), 'true')
   assert.ok([...document.querySelectorAll('.editor-top-actions button')].every(button => !button.disabled))
+  assert.deepEqual(globalThis.__start.routes, [])
 })
 
 test('the prompt waits for pending owner notes and a failed save keeps the editor and its retry action', async () => {
@@ -197,14 +194,136 @@ test('an existing recommendation is never duplicated or moved by adding it from 
 test('existing readers retain occupied-category navigation while empty/legacy editor categories stay usable', async () => {
   globalThis.__start = { routes: [] }
   const current = guide()
+  current.places = [{ ...result, id: 'p', categoryId: 'eat', note: '' }]
   current.categories = [...categories, { id: 'stay', label: 'Stay', icon: 'x', sortOrder: 6 }]
   await render(Editor, { ...editorProps(current), initialCategory: 'stay' })
   assert.match(document.querySelector('.editor-empty-question').textContent, /stay/)
   await act(async () => root.render(null))
   await render(Editor, { ...editorProps(current), initialCategory: 'not-a-category' })
-  assert.equal(chip('Eat').getAttribute('aria-pressed'), 'true')
+  assert.equal(chip('All').getAttribute('aria-pressed'), 'true')
   await act(async () => root.render(null))
   current.places = [{ ...result, id: 'p', categoryId: 'eat', note: '' }]
   await render(PublicGuide, { guide: current, onNavigate() {}, userLocation: null, locationStatus: 'idle', onRequestLocation() {}, trackUsage: false })
   assert.deepEqual([...document.querySelectorAll('.guide-chip-row button')].map(button => button.textContent), ['All', 'Eat'])
+})
+
+
+test('unfinished inline selection restores on reopening without adding it or sending anything', async () => {
+  globalThis.__start = { routes: [] }
+  const draft = createGuestDraft(destination, 'Boris', 'Warsaw', categories)
+  saveGuestDraft(draft)
+  await render(GuestResponsePage, guestProps(draft))
+  await change(document.querySelector('.search-box input'), 'cafe')
+  await click(await waitFor('.search-results button'))
+  await change(document.querySelector('#first-place-note'), 'My exact words — kept')
+  await act(async () => root.render(null))
+  await render(GuestResponsePage, guestProps(draft))
+  assert.equal(document.querySelector('.first-place-selected h2').textContent, result.name)
+  assert.equal(document.querySelector('#first-place-note').value, 'My exact words — kept')
+  assert.equal(loadGuestDraft(draft.id).guide.places.length, 0)
+  assert.deepEqual(globalThis.__start.routes, [])
+  await click(document.querySelector('.first-place-save'))
+  assert.equal(document.querySelector('.first-place-screen'), null)
+  assert.equal(loadGuestDraft(draft.id).guide.places[0].note, 'My exact words — kept')
+})
+
+test('a slow first save cannot be duplicated and keeps the original screen until every write finishes', async () => {
+  const current = guide()
+  let release
+  globalThis.__start = { guide: current, adds: [], saves: [], routes: [], addWait: new Promise(resolve => { release = resolve }) }
+  await render(CloudEditorPage, cloudProps(current))
+  await change(document.querySelector('.search-box input'), 'cafe')
+  await click(await waitFor('.search-results button'))
+  await change(document.querySelector('#first-place-note'), 'Saved together')
+  await click(document.querySelector('.first-place-save'))
+  await click(document.querySelector('.first-place-save'))
+  assert.equal(globalThis.__start.adds.length, 1)
+  assert.equal(document.querySelector('.first-place-save').disabled, true)
+  assert.equal(document.querySelector('.first-place-topbar button').disabled, true)
+  assert.equal(document.querySelector('#first-place-note').disabled, true)
+  assert.equal(document.querySelector('.editor-row'), null)
+  await act(async () => release())
+  await waitFor('.editor-row')
+  assert.equal(current.places.length, 1)
+  assert.equal(current.places[0].note, 'Saved together')
+})
+
+test('partial cloud note failure keeps the first-place task and retries the latest writing without a duplicate', async () => {
+  const current = guide()
+  globalThis.__start = { guide: current, adds: [], saves: [], routes: [], failSave: true }
+  await render(CloudEditorPage, cloudProps(current))
+  await change(document.querySelector('.search-box input'), 'cafe')
+  await click(await waitFor('.search-results button'))
+  await change(document.querySelector('#first-place-note'), 'Original draft')
+  await click(document.querySelector('.first-place-save'))
+  assert.equal(current.places.length, 1)
+  assert.ok(document.querySelector('.first-place-screen'))
+  assert.equal(document.querySelector('.editor-row'), null)
+  await change(document.querySelector('#first-place-note'), 'Latest draft')
+  await act(async () => root.render(null))
+  await render(CloudEditorPage, cloudProps(current))
+  assert.equal(document.querySelector('#first-place-note').value, 'Latest draft')
+  globalThis.__start.failSave = false
+  await click(document.querySelector('.first-place-save'))
+  assert.equal(current.places.length, 1)
+  assert.equal(current.places[0].note, 'Latest draft')
+  assert.equal(document.querySelector('.editor-place-copy textarea').value, 'Latest draft')
+})
+
+test('guest storage failure cannot claim a successful first save and retains the selection for retry', async () => {
+  globalThis.__start = { routes: [] }
+  const draft = createGuestDraft(destination, 'Boris', 'Warsaw', categories)
+  saveGuestDraft(draft)
+  await render(GuestResponsePage, guestProps(draft))
+  await change(document.querySelector('.search-box input'), 'cafe')
+  await click(await waitFor('.search-results button'))
+  await change(document.querySelector('#first-place-note'), 'Still here')
+  const prototype = window.Storage.prototype, original = prototype.setItem
+  prototype.setItem = function() { throw Error('Storage blocked') }
+  try {
+    await click(document.querySelector('.first-place-save'))
+    assert.ok(document.querySelector('.first-place-screen'))
+    assert.equal(document.querySelector('.editor-row'), null)
+    assert.equal(document.querySelector('#first-place-note').value, 'Still here')
+    assert.equal(loadGuestDraft(draft.id).guide.places.length, 0)
+    assert.ok(document.querySelector('[role="alert"]'))
+  } finally { prototype.setItem = original }
+  await click(document.querySelector('.first-place-save'))
+  assert.equal(loadGuestDraft(draft.id).guide.places.length, 1)
+  assert.ok(document.querySelector('.editor-row'))
+})
+
+test('choosing another result stays inline and discards the old category bias without saving', async () => {
+  globalThis.__start = { routes: [] }
+  const draft = createGuestDraft(destination, 'Boris', 'Warsaw', categories)
+  saveGuestDraft(draft)
+  await render(GuestResponsePage, guestProps(draft, 'edit', '?category=eat'))
+  await change(document.querySelector('.search-box input'), 'cafe')
+  await click(await waitFor('.search-results button'))
+  await click(document.querySelector('.first-place-selected .text-button'))
+  assert.equal(document.activeElement, document.querySelector('.search-box input'))
+  assert.equal(document.querySelector('.first-place-selected'), null)
+  await click(await waitFor('.search-results button'))
+  await click(document.querySelector('.first-place-save'))
+  assert.equal(loadGuestDraft(draft.id).guide.places[0].categoryId, 'coffee')
+  assert.equal(chip('Coffee').getAttribute('aria-pressed'), 'true')
+  assert.equal(document.querySelector('.editor-place-title-row strong').textContent, result.name)
+  assert.equal(document.querySelector('.editor-empty-prompt'), null)
+  assert.deepEqual(globalThis.__start.routes, [])
+})
+
+
+test('removing the final recommendation returns to a fresh first-place start while preserving the guide note', async () => {
+  globalThis.__start = { routes: [] }
+  const draft = createGuestDraft(destination, 'Boris', 'Warsaw', categories)
+  draft.guide.guideNote = 'Keep this guide context'
+  draft.guide.places = [{ ...result, id: 'existing', categoryId: 'coffee', note: 'Existing recommendation' }]
+  saveGuestDraft(draft)
+  await render(GuestResponsePage, guestProps(draft))
+  await click(document.querySelector('.row-menu-wrap > button'))
+  await click(document.querySelector('.row-menu .danger'))
+  assert.ok(document.querySelector('.first-place-screen'))
+  assert.equal(document.querySelector('.first-place-selected'), null)
+  assert.equal(document.querySelector('.search-box input').value, '')
+  assert.equal(loadGuestDraft(draft.id).guide.guideNote, 'Keep this guide context')
 })

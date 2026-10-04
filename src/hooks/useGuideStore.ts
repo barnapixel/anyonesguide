@@ -68,10 +68,13 @@ export function useGuideStore() {
 
   const reorderPlace = useCallback((id: string, targetId: string) => setGuide(current => ({ ...current, places: reorderPlaces(current.places, id, targetId), updatedAt: new Date().toISOString() })), [])
 
-  const addSearchResult = useCallback(async (result: PlaceSearchResult, categoryId?: CategoryId) => {
+  const addSearchResult = useCallback(async (result: PlaceSearchResult, categoryId?: CategoryId, note = '', requireDurable = false) => {
     const id = `place-${result.id}`
     const existing = guide.places.find(place => place.id === id || place.externalId === result.id || (place.name === result.name && place.address === result.address))
-    if (existing) return existing
+    if (existing) {
+      if (requireDurable) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(guide)) } catch { throw new Error('storage') } }
+      return existing
+    }
     const selected = guide.categories.some(c => c.id === categoryId) ? categoryId! : guessCategory(result.sourceCategory, result.name)
     const place: Place = {
       id,
@@ -83,13 +86,17 @@ export function useGuideStore() {
       lat: result.lat,
       lng: result.lng,
       categoryId: selected,
-      note: '',
+      note,
       isStarred: false,
       sortOrder: 1 + Math.max(-1, ...guide.places.filter(p => p.categoryId === selected).map(p => p.sortOrder ?? 0)),
     }
-    addPlace(place)
+    if (requireDurable) {
+      const next = { ...guide, places: [...guide.places, place], updatedAt: new Date().toISOString() }
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { throw new Error('storage') }
+      setGuide(next)
+    } else addPlace(place)
     return place
-  }, [guide.places, guide.categories, addPlace])
+  }, [guide, addPlace])
 
 
   const setVisibility = useCallback((visibility: GuideVisibility) => {
@@ -98,5 +105,6 @@ export function useGuideStore() {
 
   const resetGuide = useCallback(() => setGuide(demoGuide), [])
 
-  return { guide, setGuide, updatePlace, updateGuideNote, addPlace, addSearchResult, removePlace, movePlace, reorderPlace, setVisibility, resetGuide }
+  const saveFirstPlace = (result: PlaceSearchResult, note: string) => addSearchResult(result, undefined, note, true)
+  return { guide, saveFirstPlace, setGuide, updatePlace, updateGuideNote, addPlace, addSearchResult, removePlace, movePlace, reorderPlace, setVisibility, resetGuide }
 }

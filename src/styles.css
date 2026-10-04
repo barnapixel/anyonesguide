@@ -1288,3 +1288,31 @@ h1[tabindex="-1"]:focus, .editor-title strong[tabindex="-1"]:focus, .add-topbar 
   .editor-empty-question { font-size: 23px; }
   .editor-empty-prompt .primary-button { width: 100%; }
 }
+
+/* First place: inline search, a deliberate save, then the regular editor. */
+.first-place-topbar { grid-template-columns: 38px minmax(0, 1fr); }
+.first-place-context { display: block; margin-top: 5px; color: var(--muted); font-size: 13px; line-height: 1.4; }
+.first-place-body { width: min(640px, calc(100% - 40px)); margin: 0 auto; padding: 38px 0 44px; }
+.first-place-body h1 { margin: 0 0 16px; font: normal clamp(28px, 7vw, 38px)/1.15 Georgia, 'Times New Roman', serif; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.first-place-examples { margin: 0 0 28px; color: var(--muted); font-size: 16px; line-height: 1.5; }
+.first-place-body .search-box { margin-bottom: 0; }
+.first-place-body .search-results { position: static; margin-top: 14px; }
+.first-place-body .search-results button span { min-width: 0; }
+.first-place-body .search-results strong, .first-place-body .search-results small { overflow-wrap: anywhere; }
+.first-place-reassurance { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 18px 0 0; }
+.first-place-privacy { margin: 30px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.first-place-selected { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+.first-place-selected h2 { font: bold 25px/1.2 Georgia, 'Times New Roman', serif; margin: 0 0 8px; overflow-wrap: anywhere; }
+.first-place-address { color: var(--muted); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; margin: 0 0 8px; }
+.first-place-selected .text-button { min-height: 44px; padding: 8px 0; }
+.first-place-selected label { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin: 20px 0 10px; font-size: 14px; line-height: 1.5; }
+.first-place-selected label span { color: var(--muted); font-size: 12px; }
+.first-place-selected textarea { width: 100%; min-height: 90px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--ink); font: 16px/1.5 Georgia, 'Times New Roman', serif; padding: 12px; }
+.first-place-selected textarea::placeholder { color: var(--muted); }
+.first-place-save { width: 100%; margin-top: 22px; }
+.first-place-body .status-message { overflow-wrap: anywhere; }
+.first-place-body input { scroll-margin-top: 12px; }
+@media (max-width: 520px) {
+  .first-place-body { padding-top: 28px; }
+  .first-place-selected { padding: 20px; }
+}

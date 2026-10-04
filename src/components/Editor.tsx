@@ -1,3 +1,5 @@
+import { FirstPlace } from './FirstPlace'
+import { loadFirstPlaceDraft } from '../services/firstPlaceDraft'
 import { AuthorStar } from './AuthorStar'
 import { categoryPromptKey, editorCategory } from '../utils/category'
 import { orderCategoryPlaces } from '../utils/guideEditing'
@@ -8,7 +10,7 @@ import { CategoryChips } from './CategoryChips'
 import { trackEvent } from '../services/analytics'
 import { guideShareContent, guideShareUrl, shareUrl } from '../utils/share'
 import { useI18n } from '../i18n'
-import type { CategoryId, Guide, GuideVisibility, Place } from '../types'
+import type { CategoryId, Guide, GuideVisibility, Place, PlaceSearchResult } from '../types'
 
 const NOTE_SOFT_LIMIT = 200
 
@@ -16,6 +18,8 @@ type Props = {
   guide: Guide
   initialCategory?: string
   addedPlaceId?: string
+  firstPlaceContext?: string
+  onSaveFirstPlace: (result: PlaceSearchResult, note: string) => Promise<Place>
   onNavigate: (path: string) => void
   onUpdatePlace: (id: string, patch: Partial<Place>) => void
   onUpdateGuideNote: (note: string) => void
@@ -47,7 +51,7 @@ type DragPreview = {
   offsetY: number
 }
 
-export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, onFlushGuideNote, guideNoteSaveStatus, storageUnavailable, onRemovePlace, onMovePlace, onReorderPlace, onUpdateVisibility, backPath, previewPath, publicPath, addPath, saveError, guestMode = false, shareLabel, onShare, contextBanner, initialCategory, addedPlaceId }: Props) {
+export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, onFlushGuideNote, guideNoteSaveStatus, storageUnavailable, onRemovePlace, onMovePlace, onReorderPlace, onUpdateVisibility, backPath, previewPath, publicPath, addPath, saveError, guestMode = false, shareLabel, onShare, contextBanner, initialCategory, addedPlaceId, firstPlaceContext, onSaveFirstPlace }: Props) {
   const { t, locale, categoryLabel } = useI18n()
   const [category, setCategory] = useState<CategoryId | 'all'>(() => editorCategory(guide.categories, initialCategory, !guide.places.length))
   const [openMenu, setOpenMenu] = useState<string | null>(null)
@@ -66,16 +70,23 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
   const editorRef = useRef<HTMLElement | null>(null)
   const [noteOpen, setNoteOpen] = useState(() => Boolean(guide.guideNote.trim()))
   const empty = guide.places.length === 0
+  const firstPlaceScope = `${guestMode ? 'guest' : guide.ownerId ? 'owner:' + guide.ownerId : 'local'}:${guide.id}`
+  const [starting, setStarting] = useState(() => empty || Boolean(loadFirstPlaceDraft(firstPlaceScope)?.selected))
+  const [firstSavedId, setFirstSavedId] = useState<string | undefined>()
+  const focusPlaceId = firstSavedId ?? addedPlaceId
   useEffect(() => {
-    if (empty || initialCategory !== undefined) setCategory(editorCategory(guide.categories, initialCategory, empty))
-  }, [guide.id, empty, initialCategory])
+    if (empty) { setStarting(true); setFirstSavedId(undefined); setNotice(null) }
+  }, [empty])
+  useEffect(() => {
+    if (!firstSavedId && (empty || initialCategory !== undefined)) setCategory(editorCategory(guide.categories, initialCategory, empty))
+  }, [guide.id, empty, initialCategory, firstSavedId])
   useLayoutEffect(() => {
-    if (!addedPlaceId || !guide.places.some(place => place.id === addedPlaceId)) return
-    const row = [...(editorRef.current?.querySelectorAll<HTMLElement>('.editor-row') ?? [])].find(element => element.dataset.placeId === addedPlaceId)
+    if (!focusPlaceId || !guide.places.some(place => place.id === focusPlaceId)) return
+    const row = [...(editorRef.current?.querySelectorAll<HTMLElement>('.editor-row') ?? [])].find(element => element.dataset.placeId === focusPlaceId)
     const title = row?.querySelector<HTMLElement>('.editor-place-title-row > strong')
     title?.focus({ preventScroll: true })
     title?.scrollIntoView?.({ block: 'center', behavior: 'instant' as ScrollBehavior })
-  }, [addedPlaceId])
+  }, [focusPlaceId, starting])
   const previousRectsRef = useRef(new Map<string, DOMRect>())
 
   const filtered = useMemo(() => category === 'all' ? guide.places : guide.places.filter(place => place.categoryId === category), [guide.places, category])
@@ -262,6 +273,22 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
     { value: 'public', label: t('status.public'), help: t('visibility.publicHelp') },
   ]
 
+  if (starting) return <FirstPlace
+    guide={guide}
+    scope={firstPlaceScope}
+    context={firstPlaceContext}
+    localOnly={guestMode || !guide.ownerId}
+    storageUnavailable={storageUnavailable}
+    onBack={async () => { await onFlushGuideNote?.(); onNavigate(backPath) }}
+    onSave={onSaveFirstPlace}
+    onSaved={place => {
+      setCategory(place.categoryId)
+      setFirstSavedId(place.id)
+      setNotice(t(guestMode || !guide.ownerId ? 'first.localSaved' : 'first.saved'))
+      setStarting(false)
+    }}
+  />
+
   return (
     <main ref={editorRef} className={`editor-shell ${draggingId ? 'is-dragging' : ''}`}>
       <header className="editor-topbar">
@@ -294,9 +321,8 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
       {guestMode && !guide.places.length && <p className="finish-help" id="finish-help">{t('request.finishHelp')}</p>}
       <SaveFeedback status={guideNoteSaveStatus} onRetry={onFlushGuideNote} storageUnavailable={storageUnavailable} />
       <div className="editor-chips"><CategoryChips active={category} onChange={setCategory} places={guide.places} categories={guide.categories} showEmpty /></div>
-      {(saveError || notice) && <div className={`editor-save-error ${notice && !saveError ? 'notice' : ''}`}>{saveError ?? notice}</div>}
+      {(saveError || notice) && <div role={notice && !saveError ? 'status' : 'alert'} className={`editor-save-error ${notice && !saveError ? 'notice' : ''}`}>{saveError ?? notice}</div>}
       <section className="editor-body">
-        {empty && <p className="creation-hint">{t('creation.startGuide')}</p>}
         {!empty && guideNote}
         {!filtered.length && <div className="editor-category">
           {emptyCategory && <h2>{categoryLabel(emptyCategory)}</h2>}

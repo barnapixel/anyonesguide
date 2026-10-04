@@ -1,19 +1,14 @@
-# v0.8.4 verification
+# v0.8.4 inline first-place verification
 
 ## Checks executed
 
-`npm test` passes **104 cases**, with zero failures or skips. `npm run build` passes TypeScript and Vite production compilation. Installed dependencies were reused from the verified earlier workspace; no dependency was added or updated. Package and lockfile identify 0.8.4. No new advisory scan or live-provider test is claimed.
+`npm test` passes **114 cases**, with zero failures or skips. `npm run build` passes TypeScript and Vite production compilation. Installed dependencies were reused; none was added or updated. Package and lockfile remain 0.8.4. No new advisory scan, live-provider or hosting check is claimed.
 
-Six additional actual React editor/store flow tests cover:
+The actual React Editor/FirstPlace/owner/guest store flows are exercised with remote services/config replaced at boundaries. Search/selection stay inline and do not add a guide row. Save produces the inferred category and exact note before showing the real editor row, focus and truthful confirmation. EN/PL empty states, existing notes, category-aware subsequent additions and historical routes remain covered.
 
-- Empty editor in EN/PL: all categories, Eat selected, one appropriate prompt, collapsed optional note, one primary action, no input autofocus and no premature Preview/Share.
-- Guest additions in the chosen category, return to the actual row with focus, preserved requester context, and notes/stars surviving draft reopening.
-- Owner cloud add failure retaining search; successful retry saving the chosen category before return.
-- Pending guide-note failure blocking navigation; retry preserving authored writing before search.
-- Duplicate-place selection returning to the original category without rewriting notes/stars or creating another row.
-- Legacy Stay/custom category support, invalid navigation hint fallback, and unchanged public-reader category filtering.
+Ten additional cases cover: pending selection/text reopening without sending, guarded slow Save, partial cloud note failure/latest-value recovery/no duplicate, blocked guest storage with truthful retry, inline replacement without Eat bias, removal of the final row, fresh-module checkpoint bytes and account/guide isolation, blocked checkpoint storage memory fallback, malformed/expired/future/oversized/invalid checkpoints, and scoped success cleanup. Existing first-guide cases are rewritten around explicit Save; ordinary editor/read/share/database tests continue passing.
 
-These tests use actual Editor, AddPlaces and owner/guest stores; only config and remote service boundaries are fixtures. Existing first-guide/invitation assertions now expect the editor route. DOM tests disable local env-file loading. The bundled search interaction uses fixed demo configuration and a bounded wait for results instead of a fixed debounce sleep. Tests remain independent of local API keys. The previously reported Windows error was not supplied in full, so these changes are not presented as a confirmed diagnosis of that particular failure.
+DOM tests are independent of local API keys. These tests establish interaction/data behavior, not actual browser viewport geometry, soft-keyboard activation, live authentication or provider routing.
 
 ## Retained sharing and database evidence
 
@@ -35,14 +30,12 @@ Copy/edge tests execute actual source with mocked Netlify environment, public AP
 
 ## Release verification
 
-All ten migration files, dependency pins, the supplied star-motion component and social PNGs are compared byte-for-byte or structurally with the latest baseline. The mobile search attribution retains positive spacing and line wrapping. The consistent bottom selector and map footer patch remain. Full archive contents are compared with source bytes; source, tests, assets, Netlify/shared modules, migrations and current documentation are included. Credentials, Git metadata, dependencies, build output and caches are excluded.
+The patch is cumulative over the original complete v0.8.4 release. All ten migrations, dependency/package pins, shared sharing modules, PNG assets and AuthorStar source are compared with that baseline. First-place styles are scoped; original search attribution spacing and bottom List/Map/map-footer rules remain. Patch archive entries are compared with source bytes. Only changed/new source, tests and current documentation are included; credentials, Git metadata, dependencies, build output and caches are excluded.
 
-The four unchanged EN/PL request/guide PNGs are 1200×630 RGB, approximately 71–73KB each. They retain their v083 asset names because their content has not changed. Earlier visual inspection covered full landscape and central square crops. The optional maintenance renderer is not part of the npm build.
+The unchanged static social image assets retain their v083 suffix. The known lazy MapLibre chunk warning remains; production compilation succeeds. Author-written punctuation is untouched and system copy avoids em dashes.
 
-The production build retains the existing lazy MapLibre chunk-size warning; compilation succeeds. No dependency rewrite was made to suppress it. System copy avoids em dashes, while user-authored punctuation is untouched.
+## Remaining device/hosting acceptance
 
-## Checks still requiring deployment/devices
+The local Chromium runner failed to start, so no browser screenshot or viewport check is claimed. Test the actual first screen on a phone: tapping search keeps the same route and instruction, keyboard/input/results stay reachable, provider credits do not overlap, selecting closes the keyboard, optional note remains editable, and manual Save shows the real editor row afterwards. Check EN/PL, long content, reload and blocked storage. See [upgrade acceptance](../UPGRADE-v0.8.4-inline-first-place.md).
 
-No live database change, deployment, provider/auth test, hosted crawler fetch, real phone viewport test or WhatsApp/Messenger share was performed here. jsdom checks interaction and data behavior; it does not establish viewport geometry, soft-keyboard behavior or actual motion. Check the new empty editor, chosen-category return, notes, stars, draft reopening and attribution spacing on mobile. Check a long-list star toggle with normal and reduced motion. See [the upgrade acceptance list](../UPGRADE-v0.8.4.md).
-
-Messaging apps control wrapping, card layout and caching. Test fresh named/anonymous invitations in EN/PL through native share and copy/paste, plus a public guide and an old UUID invitation. Confirm personal title/image, one left-aligned message, one URL, requester/destination/language and draft continuity. Check image URLs return PNG rather than SPA HTML. After asynchronous invitation creation some browsers may deny native-share activation; retry retains the existing record. Native cancellation must not copy or send anything.
+No live database/deployment, provider/authentication or WhatsApp/Messenger share was performed. Retained short links, metadata and sharing require the same hosted/device acceptance as before. Cloud first place plus optional note use existing separate operations; failure/retry is tested, not advertised as a new atomic backend transaction.
