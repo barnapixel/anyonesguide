@@ -1,4 +1,5 @@
 import type { GuideEdit } from './guideSaves'
+import { displayCityName } from '../../shared/city-names.mjs'
 import { requireSupabase } from '../lib/supabase'
 import type { DestinationSearchResult, ExploreGuideSummary, Guide, GuideSummary, GuideVisibility, Place, PlaceSearchResult, Profile } from '../types'
 
@@ -102,16 +103,17 @@ async function hydrateGuide(row: GuideRow, profile?: ProfileRow | null): Promise
   })
 
   const publicName = owner.display_name.trim() || 'A local'
+  const city = displayCityName(row.city, row.country)
 
   return {
     id: row.id,
     ownerId: row.owner_id,
     profileSlug: owner.slug,
     slug: row.slug,
-    city: row.city,
+    city,
     country: row.country,
     authorName: publicName,
-    title: `${publicName}’s ${row.city}`,
+    title: `${publicName}’s ${city}`,
     intro: row.intro ?? '',
     guideNote: row.guide_note ?? '',
     center: { lat: Number(row.center_lat), lng: Number(row.center_lng) },
@@ -150,7 +152,7 @@ export async function listMyGuides(userId: string): Promise<GuideSummary[]> {
   return rows.map(row => ({
     id: row.id,
     slug: row.slug,
-    city: row.city,
+    city: displayCityName(row.city, row.country),
     country: row.country,
     intro: row.intro ?? '',
     visibility: row.visibility ?? (row.is_published ? 'unlisted' : 'draft'),
@@ -162,10 +164,11 @@ export async function listMyGuides(userId: string): Promise<GuideSummary[]> {
 
 export async function createGuide(ownerId: string, destination: DestinationSearchResult): Promise<Guide> {
   const client = requireSupabase()
-  const slug = slugify(destination.city)
+  const city = displayCityName(destination.city, destination.country)
+  const slug = slugify(destination.sourceCity ?? destination.city)
   const { data, error } = await client.from('guides').insert({
     owner_id: ownerId,
-    city: destination.city,
+    city,
     country: destination.country,
     slug,
     intro: '',
@@ -270,7 +273,7 @@ export async function listPublicGuides(): Promise<ExploreGuideSummary[]> {
     return [{
       id: row.id,
       slug: row.slug,
-      city: row.city,
+      city: displayCityName(row.city, row.country),
       country: row.country,
       intro: row.intro ?? '',
       visibility: row.visibility,

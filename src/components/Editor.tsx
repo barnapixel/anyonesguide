@@ -1,4 +1,5 @@
 import { FirstPlace } from './FirstPlace'
+import { loadImportDraft } from '../services/recommendationImport'
 import { loadFirstPlaceDraft } from '../services/firstPlaceDraft'
 import { AuthorStar } from './AuthorStar'
 import { categoryPromptKey, editorCategory } from '../utils/category'
@@ -71,7 +72,10 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
   const [noteOpen, setNoteOpen] = useState(false)
   const empty = guide.places.length === 0
   const firstPlaceScope = `${guestMode ? 'guest' : guide.ownerId ? 'owner:' + guide.ownerId : 'local'}:${guide.id}`
-  const [starting, setStarting] = useState(() => empty || Boolean(loadFirstPlaceDraft(firstPlaceScope)?.selected))
+  const [starting, setStarting] = useState(() => {
+    const pending = loadImportDraft(firstPlaceScope)
+    return empty || Boolean(loadFirstPlaceDraft(firstPlaceScope)?.selected) || Boolean(pending?.first && pending.rows.some(row => row.attempted && row.chosen && !row.savedId))
+  })
   const [firstSavedId, setFirstSavedId] = useState<string | undefined>()
   const focusPlaceId = firstSavedId ?? addedPlaceId
   useEffect(() => {

@@ -6,7 +6,7 @@ import { JSDOM } from 'jsdom'
 import { guideShareContent, guideShareUrl, requestShareContent, guideDescription } from '../shared/share-copy.mjs'
 
 async function load(file) {
-  const source = await readFile(new URL(file, import.meta.url), 'utf8')
+  const source = (await readFile(new URL(file, import.meta.url), 'utf8')).replace('../../shared/city-names.mjs', new URL('../shared/city-names.mjs', import.meta.url).href)
   return import('data:text/javascript,' + encodeURIComponent(ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
   }).outputText))

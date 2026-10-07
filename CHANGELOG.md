@@ -1,3 +1,22 @@
+# v0.8.7. Personal recommendations first
+
+- Show exact author notes directly beneath venue names, ahead of location details, in list cards and list/map place details.
+- Show up to two lines of the collapsed From [author] introduction; preserve full text on expansion and omit empty notes.
+- Leave first-save flow and latest EN/PL copy unchanged. No new photos, provider integration, dependencies, SQL or hosting configuration.
+- 160 existing automated tests and production build pass. Six local Chromium EN/PL layouts at 320/390/768 px pass with fixture data. Real phone and live Gemini/provider/hosting checks remain outstanding.
+- Include current Gemini/Netlify setup reminder. No live deployment.
+
+# v0.8.4. Integrated editor and search refinements
+
+- Integrate all prior v0.8.4 patches and the latest user-supplied EN/PL copy into one complete source archive.
+- Select All after first Save. Keep category chips in one row and the optional guide note compact and expandable, with shorter help copy.
+- Replace the selected-place change prompt with Change / Zmień beside the name. Hide examples after selection and remove the redundant sentence below Save while preserving the main question and save/privacy semantics.
+- Fix text-only first-place suggestions using a scoped full-width grid. Normal AddPlaces icon rows remain unchanged.
+- Validate and deduplicate city suggestions. Resolve complete ambiguous names and geographic qualifiers through the existing provider, preserving prefix search, cancellation and graceful ranking fallback.
+- 131 tests and the TypeScript/Vite production build pass. No dependency, SQL or environment-variable changes. Live provider/mobile/messaging checks remain outstanding.
+
+Earlier entries below document historical steps; the latest entry supersedes conflicting earlier onboarding descriptions.
+
 # v0.8.4 inline first-place patch
 
 - Replace the empty guide’s categories, repeated encouragement and disabled completion actions with one question, concrete examples and inline search in EN/PL.

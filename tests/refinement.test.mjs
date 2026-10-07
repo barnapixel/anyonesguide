@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import ts from 'typescript'
 import { readFile } from 'node:fs/promises'
-async function load(file) { const source = await readFile(new URL(file,import.meta.url),'utf8'); return import('data:text/javascript,'+encodeURIComponent(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText)) }
+async function load(file) { const source = (await readFile(new URL(file,import.meta.url),'utf8')).replace('../../shared/city-names.mjs',new URL('../shared/city-names.mjs',import.meta.url).href); return import('data:text/javascript,'+encodeURIComponent(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText)) }
 const { GuideSaveQueue, getGuideSaveQueue, flushActiveGuideSaves } = await load('../src/services/guideSaves.ts')
 const { reorderPlaces, patchPlace } = await load('../src/utils/guideEditing.ts')
 const { mapsUrl } = await load('../src/utils/maps.ts')

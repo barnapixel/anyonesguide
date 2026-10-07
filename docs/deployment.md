@@ -1,3 +1,13 @@
+# Deploying v0.8.5
+
+Use [UPGRADE-v0.8.5-screenshot-import.md](../UPGRADE-v0.8.5-screenshot-import.md) for current environment setup and acceptance. Merge the complete source, retain local credentials and repository metadata, run `npm ci`, `npm test`, and `npm run build`, then deploy through the existing Netlify source workflow.
+
+This release adds one Netlify Function. Set `GEMINI_API_KEY` and `RECOMMENDATION_IMPORT_ENABLED=true` in the Functions environment before trying import. An optional `GEMINI_IMPORT_MODEL` overrides the documented default. No dependency, database migration or auth-redirect change is required on working v0.8.4. Source deployment is necessary; `dist` alone does not include Functions or Edge Functions.
+
+Nothing has been deployed or migrated live by the assistant. The prior database and sharing instructions remain below for older installations.
+
+## Historical v0.8.4 deployment instructions
+
 # Deploying v0.8.4
 
 These instructions describe the local deliverable. No live migration or deployment was performed by the assistant.

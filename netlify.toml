@@ -5,6 +5,15 @@
 [build.environment]
   NODE_VERSION = "22"
 
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/api/recommendation-import"
+  to = "/.netlify/functions/recommendation-import"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

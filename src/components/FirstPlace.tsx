@@ -6,6 +6,8 @@ import { useI18n } from '../i18n'
 import { isLivePlaceSearchEnabled, searchPlaces } from '../services/placeSearch'
 import { clearFirstPlaceDraft, loadFirstPlaceDraft, saveFirstPlaceDraft, type FirstPlaceDraft } from '../services/firstPlaceDraft'
 import type { Guide, Place, PlaceSearchResult } from '../types'
+import { RecommendationImport } from './RecommendationImport'
+import { loadImportDraft } from '../services/recommendationImport'
 
 type Props = {
   guide: Guide
@@ -26,6 +28,9 @@ export function FirstPlace({ guide, scope, context, localOnly = false, storageUn
   const durableRef = useRef(durable)
   durableRef.current = durable
   const [saving, setSaving] = useState(false)
+  const [importOpen, setImportOpen] = useState(() => Boolean(loadImportDraft(scope)?.rows.length))
+  const [importBusy, setImportBusy] = useState(false)
+  const importBusyRef = useRef(false)
   const savingRef = useRef(false)
   const [error, setError] = useState<string | null>(null)
   const [searchAttempt, setSearchAttempt] = useState(0)
@@ -62,7 +67,7 @@ export function FirstPlace({ guide, scope, context, localOnly = false, storageUn
   }, [draft.selected?.id])
 
   const back = async () => {
-    if (savingRef.current) return
+    if (savingRef.current || importBusyRef.current) return
     try { await onBack() } catch { setError('save.error') }
   }
 
@@ -85,13 +90,14 @@ export function FirstPlace({ guide, scope, context, localOnly = false, storageUn
 
   return <main ref={screenRef} className="editor-shell first-place-screen">
     <header className="editor-topbar first-place-topbar">
-      <button type="button" className="icon-button" onClick={() => void back()} disabled={saving} aria-label={t('common.back')}><ArrowLeft size={20} /></button>
+      <button type="button" className="icon-button" onClick={() => void back()} disabled={saving || importBusy} aria-label={t('common.back')}><ArrowLeft size={20} /></button>
       <div className="editor-title"><strong>{guide.city}</strong>{context && <span className="first-place-context">{context}</span>}</div>
     </header>
     <section className="first-place-body">
-      <h1>{t('first.question')}</h1>
-      <p className="first-place-examples">{t('first.examples')}</p>
+      {!importOpen && <h1>{t('first.question')}</h1>}
+      {!draft.selected && !importOpen && <><p className="first-place-examples">{t('first.examples')}</p><p className="first-place-reassurance">{t('first.reassurance')}</p></>}
       {!draft.selected ? <>
+        {!importOpen && <>
         <div className="search-box">
           <Search size={19} aria-hidden="true" />
           <input ref={inputRef} type="text" inputMode="search" enterKeyHint="search" maxLength={300} value={draft.query} aria-label={t('common.search')} placeholder={t('add.searchFirst', { city: guide.city })} onChange={event => update({ query: event.target.value })} />
@@ -106,17 +112,21 @@ export function FirstPlace({ guide, scope, context, localOnly = false, storageUn
         </div>}
         {!loading && !failed && draft.query.trim().length >= 2 && !results.length && <p className="search-status" role="status">{t('add.noMatches')}</p>}
         {error && <p className="status-message error" role="alert">{t(error)}</p>}
+        </>}
+        <RecommendationImport guide={guide} scope={scope} first open={importOpen} onOpenChange={setImportOpen} onBusyChange={value => { importBusyRef.current = value; setImportBusy(value) }} onSave={onSave} onDone={place => { if (place) { clearFirstPlaceDraft(scope); onSaved(place) } else setImportOpen(false) }} />
       </> : <>
         <article className="first-place-selected">
-          <h2 ref={titleRef} tabIndex={-1}>{draft.selected.name}</h2>
+          <div className="first-place-selected-heading">
+            <h2 ref={titleRef} tabIndex={-1}>{draft.selected.name}</h2>
+            <button type="button" className="text-button first-place-change" disabled={saving} aria-label={t('first.changePlace')} onClick={() => { focusSearch.current = true; update({ selected: null }) }}>{t('first.change')}</button>
+          </div>
           <p className="first-place-address">{draft.selected.address}</p>
-          <button type="button" className="text-button" disabled={saving} onClick={() => { focusSearch.current = true; update({ selected: null }) }}>{t('first.changePlace')}</button>
           <label htmlFor="first-place-note">{t('first.note')} <span>{t('add.optional')}</span></label>
           <textarea id="first-place-note" rows={2} maxLength={5000} value={draft.note} disabled={saving} placeholder={t('first.notePlaceholder')} onChange={event => update({ note: event.target.value })} />
         </article>
         {error && <p className="status-message error" role="alert">{t(error)}</p>}
         <button type="button" className="primary-button first-place-save" disabled={saving} onClick={() => void save()}>{t(saving ? 'add.saving' : error ? 'first.retrySave' : 'first.savePlace')}</button>
-        <p className="first-place-reassurance" role={saving ? 'status' : undefined}>{t(saving ? 'first.savingHelp' : 'first.saveHelp')}</p>
+        {saving && <p className="sr-only" role="status">{t('first.savingHelp')}</p>}
       </>}
       {(!durable || storageUnavailable) && <p className="status-message error" role="alert">{t('first.storageWarning')}</p>}
       {localOnly && durable && !storageUnavailable && <p className="first-place-privacy">{t('first.localDraft')}</p>}

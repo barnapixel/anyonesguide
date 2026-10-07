@@ -1,4 +1,6 @@
 import { categoryPromptKey } from '../utils/category'
+import { RecommendationImport } from './RecommendationImport'
+import { importScope, loadImportDraft } from '../services/recommendationImport'
 import { AuthorStar } from './AuthorStar'
 import { useSearch } from '../hooks/useSearch'
 import { SaveFeedback } from './SaveFeedback'
@@ -21,6 +23,8 @@ type Props = {
   onNavigate: (path: string) => void
   backPath: string
   onAddSearchResult: (result: PlaceSearchResult, categoryId?: CategoryId) => Promise<Place>
+  onImportSave?: (result: PlaceSearchResult, note: string, categoryId?: CategoryId) => Promise<Place>
+  guestMode?: boolean
   onUpdatePlace: (id: string, patch: Partial<Place>) => void
   saveStatusByPlaceId?: Record<string, SaveStatus>
   contextBanner?: ReactNode
@@ -30,7 +34,7 @@ type Props = {
   noteLimit?: number
 }
 
-export function AddPlaces({ guide, onNavigate, backPath, onAddSearchResult, onUpdatePlace, saveStatusByPlaceId, contextBanner, noteLimit, onFlush, saveStatus, storageUnavailable, guidedStart = false, previewPath, finishPath, categoryId, returnToGuide = false }: Props) {
+export function AddPlaces({ guide, onNavigate, backPath, onAddSearchResult, onImportSave, guestMode = false, onUpdatePlace, saveStatusByPlaceId, contextBanner, noteLimit, onFlush, saveStatus, storageUnavailable, guidedStart = false, previewPath, finishPath, categoryId, returnToGuide = false }: Props) {
   const { t, categoryLabel } = useI18n()
   const selectedCategory = guide.categories.find(category => category.id === categoryId)?.id
   const returnPath = (place?: Place) => {
@@ -40,6 +44,10 @@ export function AddPlaces({ guide, onNavigate, backPath, onAddSearchResult, onUp
     return url.pathname + url.search
   }
   const [query, setQuery] = useState('')
+  const scope = importScope(guide, guestMode)
+  const [importOpen, setImportOpen] = useState(() => Boolean(loadImportDraft(scope)?.rows.length))
+  const [importBusy, setImportBusy] = useState(false)
+  const importBusyRef = useRef(false)
   const search = useCallback((value: string, signal: AbortSignal) => searchPlaces(value, guide.center, signal), [guide.center])
   const { results, loading, failed } = useSearch(query, true, search)
   const addingRef = useRef(false)
@@ -52,7 +60,7 @@ export function AddPlaces({ guide, onNavigate, backPath, onAddSearchResult, onUp
   const recentSaveStatus: SaveStatus = recent ? (saveStatusByPlaceId?.[recent.id] ?? 'saved') : 'idle'
   const showRecent = Boolean(recent && query.trim().length === 0)
 
-  const leave = async (path = returnPath()) => { if (addingRef.current) return; try { await onFlush?.(); onNavigate(path) } catch { /* SaveFeedback retains the retry path. */ } }
+  const leave = async (path = returnPath()) => { if (addingRef.current || importBusyRef.current) return; try { await onFlush?.(); onNavigate(path) } catch { /* SaveFeedback retains the retry path. */ } }
 
   const choose = async (result: PlaceSearchResult) => {
     if (addingRef.current) return
@@ -79,13 +87,14 @@ export function AddPlaces({ guide, onNavigate, backPath, onAddSearchResult, onUp
   return (
     <main className="add-shell">
       <header className="add-topbar">
-        <button className="icon-button" disabled={adding} onClick={() => void leave()} aria-label={t('common.back')}><ArrowLeft size={20} /></button>
+        <button className="icon-button" disabled={adding || importBusy} onClick={() => void leave()} aria-label={t('common.back')}><ArrowLeft size={20} /></button>
         <strong>{t('add.title')}</strong>
-        <button className="icon-button" disabled={adding} onClick={() => void leave()} aria-label={t('common.close')}><X size={20} /></button>
+        <button className="icon-button" disabled={adding || importBusy} onClick={() => void leave()} aria-label={t('common.close')}><X size={20} /></button>
       </header>
       {contextBanner}
       <SaveFeedback status={saveStatus} onRetry={onFlush} storageUnavailable={storageUnavailable} />
       <section className="add-content">
+        {!importOpen && <>
         {selectedCategory && <p className="creation-hint">{t(categoryPromptKey(selectedCategory))}</p>}
         {!selectedCategory && guidedStart && guide.places.length < 3 && <p className="creation-hint">{t(guide.places.length ? 'creation.smallGuide' : 'creation.firstPlace')}</p>}
         <div className="search-box">
@@ -109,8 +118,19 @@ export function AddPlaces({ guide, onNavigate, backPath, onAddSearchResult, onUp
           </div>
         )}
         {!loading && !adding && !error && !failed && query.trim().length >= 2 && results.length === 0 && <div className="search-status">{t('add.noMatches')}</div>}
+        </>}
+        {!adding && <RecommendationImport guide={guide} scope={scope} open={importOpen} onOpenChange={setImportOpen} onBusyChange={value => { importBusyRef.current = value; setImportBusy(value) }} onSave={async (result, note) => {
+          if (onImportSave) return onImportSave(result, note, selectedCategory)
+          const place = await onAddSearchResult(result, selectedCategory)
+          if (note) onUpdatePlace(place.id, { note })
+          await onFlush?.()
+          return place
+        }} onDone={place => {
+          setImportOpen(false); setQuery('')
+          if (place) { setRecentId(place.id); if (returnToGuide) void leave(returnPath(place)) }
+        }} />}
 
-        {showRecent && recent && (
+        {!importOpen && showRecent && recent && (
           <section className="recent-card">
             <div className="recent-success"><Check size={17} /> {t('add.added', { category: recentCategory ? categoryLabel(recentCategory) : t('add.yourGuide') })}</div>
             <div className="recent-title-row"><h2>{recent.name}</h2><AuthorStar place={recent} onChange={isStarred => onUpdatePlace(recent.id, { isStarred })} /></div>

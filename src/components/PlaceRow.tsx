@@ -17,8 +17,8 @@ export function PlaceRow({ place, category, userLocation, onClick }: Props) {
     <button className="place-row" onClick={onClick}>
       <span className="place-copy">
         <span className="place-title">{place.name}{place.isStarred && <span className="author-pick-icon" role="img" aria-label={t('star.label')}><Star size={16} fill="currentColor" aria-hidden="true" /></span>}</span>
-        <span className="place-meta">{place.subtitle || (category ? categoryLabel(category) : '')}{distance ? ` · ${distance} ${t('place.away')}` : ''}</span>
         {place.note && <span className="place-note">{place.note}</span>}
+        <span className="place-meta">{place.subtitle || (category ? categoryLabel(category) : '')}{distance ? ` · ${distance} ${t('place.away')}` : ''}</span>
       </span>
     </button>
   )

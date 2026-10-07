@@ -1,4 +1,5 @@
 import type { Category, DestinationSearchResult, Guide } from '../types'
+import { displayCityName } from '../../shared/city-names.mjs'
 
 export type GuestDraft = {
   id: string
@@ -60,20 +61,28 @@ export function guestSnapshotBytes(draft: GuestDraft) {
 
 export function createGuestDraft(destination: DestinationSearchResult, requesterName: string, requestedCity: string, categories: Category[], invitationId?: string, requesterAnonymous?: boolean): GuestDraft {
   const id = crypto.randomUUID()
+  const city = displayCityName(destination.city, destination.country)
   return {
     id, key: crypto.randomUUID(), requesterName, requestedCity,
     ...(invitationId ? { invitationId } : {}),
     ...(requesterAnonymous ? { requesterAnonymous: true } : {}),
     guide: {
-      id, slug: 'guest-draft', city: destination.city, country: destination.country,
-      authorName: 'A local', title: destination.city, intro: '', guideNote: '',
+      id, slug: 'guest-draft', city, country: destination.country,
+      authorName: 'A local', title: city, intro: '', guideNote: '',
       center: { lat: destination.lat, lng: destination.lng }, categories: categories.map(category => ({ ...category })),
       places: [], visibility: 'draft', isPublished: false, updatedAt: new Date().toISOString(),
     },
   }
 }
 
+export function withGuestCityName(draft: GuestDraft): GuestDraft {
+  const city = displayCityName(draft.guide.city, draft.guide.country)
+  if (city === draft.guide.city) return draft
+  return { ...draft, guide: { ...draft.guide, city, title: draft.guide.title === draft.guide.city ? city : draft.guide.title } }
+}
+
 export function saveGuestDraft(draft: GuestDraft, target = storage()): boolean {
+  draft = withGuestCityName(draft)
   drafts.set(draft.id, draft)
   const index = invitationKey(draft.requesterName, draft.requestedCity, draft.invitationId)
   invitations.set(index, draft.id)
@@ -96,8 +105,9 @@ export function loadGuestDraft(id: string, target = storage()): GuestDraft | nul
     if (!raw) return null
     const parsed: unknown = JSON.parse(raw)
     if (!isGuestDraft(parsed) || parsed.id !== id) return null
-    drafts.set(id, parsed)
-    return parsed
+    const draft = withGuestCityName(parsed)
+    drafts.set(id, draft)
+    return draft
   } catch { return null }
 }
 

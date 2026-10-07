@@ -100,6 +100,9 @@ export type PlaceSearchResult = {
 export type DestinationSearchResult = {
   id: string
   city: string
+  // Preserve the provider name for existing slug/duplicate behaviour when the
+  // user-facing label is an administrative-name alias.
+  sourceCity?: string
   country: string
   lat: number
   lng: number

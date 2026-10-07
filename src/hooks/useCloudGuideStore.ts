@@ -72,10 +72,10 @@ export function useCloudGuideStore(guideId: string, userId: string) {
     if (ref.current) change({ ...ref.current, places: [...ref.current.places, place] })
     return place
   }
-  const saveFirstPlace = async (result: PlaceSearchResult, note: string) => {
+  const saveFirstPlace = async (result: PlaceSearchResult, note: string, categoryId?: CategoryId) => {
     const pending = ref.current?.places.find(p => p.externalId === result.id || p.name === result.name && p.address === result.address)
     if (pending && pending.note !== note) updatePlace(pending.id, { note })
-    const place = await addSearchResult(result)
+    const place = await addSearchResult(result, categoryId)
     if (place.note !== note) updatePlace(place.id, { note })
     await queue.flush()
     return ref.current?.places.find(p => p.id === place.id) ?? place

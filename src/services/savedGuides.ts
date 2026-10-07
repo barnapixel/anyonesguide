@@ -1,4 +1,5 @@
 import type { Guide, SavedGuide } from '../types'
+import { displayCityName } from '../../shared/city-names.mjs'
 
 const STORAGE_KEY = 'anyones-guide:saved-guides:v1'
 const CHANGE_EVENT = 'anyones-guide:saved-guides-changed'
@@ -15,7 +16,7 @@ function safeParse(raw: string | null): SavedGuide[] {
       typeof item.guideSlug === 'string' &&
       typeof item.city === 'string' &&
       typeof item.authorName === 'string'
-    ))
+    )).map(item => ({ ...item, city: displayCityName(item.city, item.country) }))
   } catch {
     return []
   }
@@ -47,7 +48,7 @@ export function saveGuide(guide: Guide) {
     guideId: guide.id,
     profileSlug: guide.profileSlug,
     guideSlug: guide.slug,
-    city: guide.city,
+    city: displayCityName(guide.city, guide.country),
     country: guide.country,
     authorName: guide.authorName,
     intro: guide.intro,

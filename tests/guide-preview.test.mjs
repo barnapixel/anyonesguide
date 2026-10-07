@@ -111,6 +111,20 @@ test('crawler substitutions treat dollar replacement sequences in author writing
  assert.ok(request.includes('<title>Ada $&amp; is asking for your recommendations. Anyone’s Guide</title>'))
 })
 
+test('existing Greater London guide previews use London in both languages while keeping the original URL and exact note', async () => {
+ const {context}=setup(),regularFetch=globalThis.fetch
+ globalThis.fetch=async(input,init)=>new URL(input).pathname.endsWith('/guides')
+  ? Response.json([{city:'Greater London',country:'United Kingdom',guide_note:'My Greater London favourites. Keep these words.'}])
+  : regularFetch(input,init)
+ for(const locale of ['en','pl']) {
+  const url=`https://guides.example.com/boris/greater-london?lang=${locale}`
+  const response=await guidePreview(new Request(url),context),body=await response.text()
+  assert.ok(body.includes(locale==='pl' ? 'content="London. Poleca Boris &amp; Friends"' : 'content="Boris &amp; Friends’s Guide to London"'))
+  assert.ok(body.includes(`property="og:url" content="${url.replace('&','&amp;')}"`))
+  assert.ok(body.includes('My Greater London favourites. Keep these words.'))
+ }
+})
+
 test('stored invitation previews use record identity and language, escape text and discard spoofed query fields',async()=>{
  const {context}=setup(),id=crypto.randomUUID();let calls=[]
  globalThis.fetch=async(input,init)=>{calls.push({url:new URL(input),init});return Response.json({id,name:'Boris & <Friends>',city:'Warsaw <3',locale:'pl'})}

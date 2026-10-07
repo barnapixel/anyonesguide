@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import ts from 'typescript'
 
 // Transpile the small storage module so npm test also works on Node 22.12.
-const storageSource = readFileSync(new URL('../src/services/savedGuides.ts', import.meta.url), 'utf8')
+const storageSource = readFileSync(new URL('../src/services/savedGuides.ts', import.meta.url), 'utf8').replace('../../shared/city-names.mjs', new URL('../shared/city-names.mjs', import.meta.url).href)
 const storageJs = ts.transpileModule(storageSource, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
 }).outputText

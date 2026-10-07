@@ -1,5 +1,6 @@
 import { orderCategoryPlaces, patchPlace, reorderPlaces } from '../utils/guideEditing'
-import { useCallback, useEffect, useState } from 'react'
+import { displayCityName } from '../../shared/city-names.mjs'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { categories, demoGuide } from '../data/demo'
 import { guessCategory } from '../utils/category'
 import type { CategoryId, Guide, GuideVisibility, Place, PlaceSearchResult } from '../types'
@@ -15,7 +16,8 @@ function loadGuide(): Guide {
       const places = parsed.places ?? demoGuide.places
       const savedCategories = parsed.categories ?? categories
       const visibleCategories = savedCategories.filter(category => category.id !== 'stay' || places.some(place => place.categoryId === 'stay'))
-      return { ...demoGuide, ...parsed, visibility, categories: visibleCategories, isPublished: visibility !== 'draft', places }
+      const city = displayCityName(parsed.city ?? demoGuide.city, parsed.country ?? demoGuide.country)
+      return { ...demoGuide, ...parsed, city, visibility, categories: visibleCategories, isPublished: visibility !== 'draft', places }
     }
   } catch {
     // Ignore malformed local state and return the bundled demo.
@@ -25,6 +27,8 @@ function loadGuide(): Guide {
 
 export function useGuideStore() {
   const [guide, setGuide] = useState<Guide>(() => loadGuide())
+  const guideRef = useRef(guide)
+  guideRef.current = guide
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(guide)) }
@@ -69,12 +73,14 @@ export function useGuideStore() {
   const reorderPlace = useCallback((id: string, targetId: string) => setGuide(current => ({ ...current, places: reorderPlaces(current.places, id, targetId), updatedAt: new Date().toISOString() })), [])
 
   const addSearchResult = useCallback(async (result: PlaceSearchResult, categoryId?: CategoryId, note = '', requireDurable = false) => {
+    const guide = guideRef.current
     const id = `place-${result.id}`
     const existing = guide.places.find(place => place.id === id || place.externalId === result.id || (place.name === result.name && place.address === result.address))
     if (existing) {
       if (requireDurable) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(guide)) } catch { throw new Error('storage') } }
       return existing
     }
+    if (guide.places.length >= 100) throw new Error('A guide can include up to 100 places.')
     const selected = guide.categories.some(c => c.id === categoryId) ? categoryId! : guessCategory(result.sourceCategory, result.name)
     const place: Place = {
       id,
@@ -93,6 +99,7 @@ export function useGuideStore() {
     if (requireDurable) {
       const next = { ...guide, places: [...guide.places, place], updatedAt: new Date().toISOString() }
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { throw new Error('storage') }
+      guideRef.current = next
       setGuide(next)
     } else addPlace(place)
     return place
@@ -105,6 +112,6 @@ export function useGuideStore() {
 
   const resetGuide = useCallback(() => setGuide(demoGuide), [])
 
-  const saveFirstPlace = (result: PlaceSearchResult, note: string) => addSearchResult(result, undefined, note, true)
+  const saveFirstPlace = (result: PlaceSearchResult, note: string, categoryId?: CategoryId) => addSearchResult(result, categoryId, note, true)
   return { guide, saveFirstPlace, setGuide, updatePlace, updateGuideNote, addPlace, addSearchResult, removePlace, movePlace, reorderPlace, setVisibility, resetGuide }
 }

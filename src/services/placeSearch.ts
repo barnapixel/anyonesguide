@@ -1,6 +1,7 @@
 import { appConfig } from '../config'
 import { fallbackSearchResults } from '../data/demo'
 import type { Coordinates, DestinationSearchResult, PlaceSearchResult } from '../types'
+import { destinationSuggestions, needsDestinationResolution } from './destinationSuggestions'
 
 const API_KEY = appConfig.geoapifyApiKey
 export const isLivePlaceSearchEnabled = appConfig.geoapifyEnabled
@@ -71,22 +72,33 @@ export async function searchDestinations(query: string, signal?: AbortSignal): P
     text: trimmed,
     type: 'city',
     format: 'json',
-    limit: '6',
+    limit: '20',
     lang: 'en',
     apiKey: API_KEY,
   })
   try {
     const response = await fetch(`https://api.geoapify.com/v1/geocode/autocomplete?${params.toString()}`, { signal })
     if (!response.ok) throw new Error(`Geoapify destination search failed: ${response.status}`)
-    const data = await response.json() as { results?: Array<Record<string, unknown>> }
+    const data = await response.json() as { results?: unknown[] }
     if (data.results !== undefined && !Array.isArray(data.results)) throw new Error('Invalid search response.')
-    return (data.results ?? []).filter(result => result && typeof result === 'object' && typeof result.lat === 'number' && typeof result.lon === 'number' && [result.name,result.address_line1,result.city].some(value => typeof value === 'string' && value.trim().length > 0)).map((result, index) => ({
-      id: String(result.place_id ?? `${result.city ?? result.name}-${index}`),
-      city: String(result.city ?? result.name ?? result.address_line1 ?? 'Unknown city'),
-      country: String(result.country ?? ''),
-      lat: Number(result.lat),
-      lng: Number(result.lon),
-    })).filter(result => Number.isFinite(result.lat) && result.lat >= -90 && result.lat <= 90 && Number.isFinite(result.lng) && result.lng >= -180 && result.lng <= 180)
+    const results = data.results ?? []
+    if (signal?.aborted) return []
+    if (needsDestinationResolution(trimmed, results)) {
+      try {
+        // Autocomplete handles prefixes. The city geocoder supplies popularity
+        // ranking for complete ambiguous names and understands country/region qualifiers.
+        const resolved = await fetch(`https://api.geoapify.com/v1/geocode/search?${params.toString()}`, { signal })
+        if (!resolved.ok) throw new Error(`Geoapify city resolution failed: ${resolved.status}`)
+        const ranked = await resolved.json() as { results?: unknown[] }
+        if (ranked.results !== undefined && !Array.isArray(ranked.results)) throw new Error('Invalid city response.')
+        if (signal?.aborted) return []
+        if (ranked.results?.length) return destinationSuggestions(trimmed, ranked.results, true)
+      } catch (error) {
+        if (signal?.aborted || isAbortError(error)) return []
+        // Keep usable autocomplete matches if the optional ranking request fails.
+      }
+    }
+    return destinationSuggestions(trimmed, results)
   } catch (error) {
     if (signal?.aborted || isAbortError(error)) return []
     throw error

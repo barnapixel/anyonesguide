@@ -1,4 +1,5 @@
 import { createPlaceMarkerElement } from '../utils/mapMarkers'
+import { mapCameraPadding } from '../utils/mapPadding'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AttributionControl, LngLatBounds, Map, Marker, setWorkerUrl, type PaddingOptions, type StyleSpecification } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -63,9 +64,8 @@ function geoapifyRasterStyle(apiKey: string): StyleSpecification {
 
 function cameraPadding(): PaddingOptions {
   const mobile = window.matchMedia('(max-width: 520px)').matches
-  return mobile
-    ? { top: 142, right: 34, bottom: 122, left: 34 }
-    : { top: 150, right: 60, bottom: 126, left: 60 }
+  const clearance = Number.parseFloat(window.getComputedStyle(document.body).getPropertyValue('--netlify-badge-clearance')) || 0
+  return mapCameraPadding(mobile, clearance)
 }
 
 function fitPlaces(map: Map, guide: Guide, places: Place[], animate: boolean) {
@@ -158,8 +158,20 @@ export function GuideMap({ guide, places, selectedPlace, onSelectPlace, userLoca
       setMapReady(true)
     })
     mapRef.current = map
+    // Late badge injection/dismissal changes the usable map area. Preserve the
+    // current camera and adjust its padding, without another fit or zoom.
+    let lastPadding = JSON.stringify(cameraPadding())
+    const updatePadding = () => {
+      const padding = cameraPadding(), next = JSON.stringify(padding)
+      if (lastPadding !== next) { lastPadding = next; map.setPadding(padding) }
+    }
+    const badgeObserver = new MutationObserver(updatePadding)
+    badgeObserver.observe(document.body, { childList: true })
+    window.addEventListener('resize', updatePadding)
     const resizeTimer = window.setTimeout(() => map.resize(), 50)
     return () => {
+      badgeObserver.disconnect()
+      window.removeEventListener('resize', updatePadding)
       window.clearTimeout(resizeTimer)
       map.remove()
       mapRef.current = null

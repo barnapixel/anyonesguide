@@ -47,6 +47,6 @@ export function useGuestGuideStore(id: string) {
     change(guide => ({ ...guide, places: [...guide.places, place] }), requireDurable)
     return place
   }
-  const saveFirstPlace = (result: PlaceSearchResult, note: string) => addSearchResult(result, undefined, note, true)
+  const saveFirstPlace = (result: PlaceSearchResult, note: string, categoryId?: CategoryId) => addSearchResult(result, categoryId, note, true)
   return { draft, storageError, saveFirstPlace, updatePlace, updateGuideNote, removePlace, reorderPlace, movePlace, addSearchResult }
 }

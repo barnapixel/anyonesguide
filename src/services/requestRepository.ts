@@ -1,5 +1,5 @@
 import { requireSupabase } from '../lib/supabase'
-import { guestSnapshotBytes, isGuestDraft, type GuestDraft } from './guestDrafts'
+import { guestSnapshotBytes, isGuestDraft, withGuestCityName, type GuestDraft } from './guestDrafts'
 import { invitationCodePattern, invitationIdPattern, isStoredInvitation, type GuideInvitation } from '../utils/requestLinks'
 
 export async function createInvitation(creationKey: string, name: string, city: string, locale: 'en' | 'pl'): Promise<GuideInvitation & { id: string }> {
@@ -38,7 +38,7 @@ export async function recoverGuestDraft(id: string, key: string): Promise<{ draf
   if (error) throw error
   if (data?.guideId) return { draft: null, guideId: data.guideId }
   if (!isGuestDraft(data?.draft) || data.draft.id !== id || data.draft.key !== key) throw new Error('Draft unavailable or expired.')
-  return { draft: data.draft, guideId: null }
+  return { draft: withGuestCityName(data.draft), guideId: null }
 }
 
 export async function claimGuestDraft(id: string, key: string): Promise<string> {

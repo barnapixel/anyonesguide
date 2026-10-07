@@ -1,4 +1,5 @@
 :root {
+  --netlify-badge-clearance: 0px;
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #173330;
   background: #f8f5ee;
@@ -317,6 +318,7 @@ body { background: var(--paper); color: var(--ink); }
 .place-title { font-size: 20px; line-height: 1.16; letter-spacing: -.018em; }
 .place-meta { margin-top: 4px; font-family: Inter, ui-sans-serif, sans-serif; font-size: 13px; line-height: 1.4; color: var(--muted); }
 .place-note { margin-top: 8px; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.42; color: #3f4b47; -webkit-line-clamp: 2; }
+.place-note + .place-meta { margin-top: 7px; }
 .place-chevron { display: none; }
 
 .mode-switch { bottom: calc(16px + env(safe-area-inset-bottom)); padding: 4px; background: rgba(255,253,249,.96); border-color: rgba(222,216,206,.95); box-shadow: 0 10px 30px rgba(29,42,39,.13); }
@@ -332,7 +334,7 @@ body { background: var(--paper); color: var(--ink); }
 .place-sheet { padding: 38px 24px calc(30px + env(safe-area-inset-bottom)); background: var(--white); }
 .place-sheet h2 { font-size: 34px; line-height: 1.04; letter-spacing: -.035em; margin-top: 9px; }
 .sheet-meta { margin-top: 7px; font-size: 13px; letter-spacing: .01em; }
-.sheet-note { margin: 28px 0; font-size: 20px; line-height: 1.5; color: #34423e; }
+.sheet-note { margin: 16px 0 12px; font-size: 20px; line-height: 1.5; color: #34423e; }
 .address-row { padding: 18px 0 20px; }
 .primary-button { background: var(--ink); min-height: 50px; border-radius: 999px; }
 .primary-button:hover { background: #21433f; }
@@ -1191,7 +1193,7 @@ body { background: var(--paper); color: var(--ink); }
 .guide-note-card summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 15px; }
 .guide-note-summary-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .guide-note-summary-copy strong { color: var(--accent-dark); font-size: 12px; letter-spacing: .045em; text-transform: uppercase; }
-.guide-note-excerpt { display: block; color: #45504b; font: 15px/1.35 Georgia, 'Times New Roman', serif; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.guide-note-excerpt { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: #45504b; font: 15px/1.35 Georgia, 'Times New Roman', serif; white-space: pre-wrap; overflow-wrap: anywhere; overflow: hidden; }
 .guide-note-expand { display: inline-flex; align-items: center; gap: 4px; flex: none; color: var(--muted); font-size: 11px; white-space: nowrap; }
 .guide-note-expand svg { transition: transform .15s ease; }
 .guide-note-card[open] .guide-note-excerpt { display: none; }
@@ -1336,19 +1338,80 @@ h1[tabindex="-1"]:focus, .editor-title strong[tabindex="-1"]:focus, .add-topbar 
 .first-place-examples { margin: 0 0 28px; color: var(--muted); font-size: 16px; line-height: 1.5; }
 .first-place-body .search-box { margin-bottom: 0; }
 .first-place-body .search-results { position: static; margin-top: 14px; }
+.first-place-body .search-results button { grid-template-columns: minmax(0, 1fr); }
 .first-place-body .search-results button span { min-width: 0; }
 .first-place-body .search-results strong, .first-place-body .search-results small { overflow-wrap: anywhere; }
-.first-place-reassurance { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 18px 0 0; }
+.first-place-body .search-results small { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .first-place-privacy { margin: 30px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .first-place-selected { background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
 .first-place-selected h2 { font: bold 25px/1.2 Georgia, 'Times New Roman', serif; margin: 0 0 8px; overflow-wrap: anywhere; }
+.first-place-selected-heading { display: flex; align-items: flex-start; gap: 12px; }
+.first-place-selected-heading h2 { flex: 1; min-width: 0; }
+.first-place-selected .first-place-change { flex: none; min-width: 44px; min-height: 44px; padding: 8px; margin-top: -7px; color: var(--accent-dark); }
 .first-place-address { color: var(--muted); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; margin: 0 0 8px; }
-.first-place-selected .text-button { min-height: 44px; padding: 8px 0; }
 .first-place-selected label { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin: 20px 0 10px; font-size: 14px; line-height: 1.5; }
 .first-place-selected label span { color: var(--muted); font-size: 12px; }
 .first-place-selected textarea { width: 100%; min-height: 90px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--ink); font: 16px/1.5 Georgia, 'Times New Roman', serif; padding: 12px; }
 .first-place-selected textarea::placeholder { color: var(--muted); }
 .first-place-save { width: 100%; margin-top: 22px; }
+.first-place-reassurance { color: var(--muted); font-size: 14px; line-height: 1.5; margin: -12px 0 24px; }
+
+/* Optional import stays on the existing add screen, with one detail row open. */
+.import-entry { margin-top: 26px; }
+.import-entry-link { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 4px 0; text-align: left; }
+.import-entry-link svg { flex: none; }
+.import-entry p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.recommendation-import { margin-top: 24px; min-width: 0; }
+.import-heading { display: flex; align-items: flex-start; gap: 12px; }
+.import-heading h1, .import-heading h2 { flex: 1; margin: 0; font: bold 27px/1.2 Georgia, serif; overflow-wrap: anywhere; }
+.import-heading > button { flex: none; }
+.import-help { color: var(--muted); font-size: 15px; line-height: 1.55; margin: 14px 0 22px; }
+.import-small { color: var(--muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.import-file { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+.import-image { display: block; max-width: 100%; max-height: 240px; margin: 0 auto 18px; object-fit: contain; border: 1px solid var(--line); border-radius: 10px; }
+.import-switch { display: block; min-height: 44px; margin: 12px 0; padding: 8px 0; text-align: left; }
+.import-text-label, .import-note { display: block; font-size: 14px; line-height: 1.5; }
+.import-note span { color: var(--muted); font-size: 12px; }
+.recommendation-import textarea { display: block; width: 100%; margin-top: 10px; min-height: 88px; padding: 12px; font-size: 16px; line-height: 1.5; color: var(--ink); background: var(--white); border: 1px solid var(--line); border-radius: 10px; resize: vertical; }
+.import-rows { border-top: 1px solid var(--line); }
+.import-row { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.import-row-heading { display: flex; align-items: flex-start; gap: 10px; }
+.import-row-heading > button { flex: none; min-height: 44px; padding: 8px 0 8px 8px; }
+.import-check { display: flex; flex: 1; min-width: 0; min-height: 44px; gap: 12px; align-items: flex-start; cursor: pointer; }
+.import-check input { flex: none; width: 22px; height: 22px; margin: 10px 0; accent-color: var(--ink); }
+.import-check span { display: block; min-width: 0; padding: 7px 0; }
+.import-check strong { display: block; font: bold 20px/1.25 Georgia, serif; overflow-wrap: anywhere; }
+.import-check small { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.import-saved { flex: none; color: var(--muted); font-size: 12px; padding-top: 12px; }
+.import-row-detail { margin-top: 16px; }
+.import-quote { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 8px 0 0 34px; color: var(--muted); font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.import-matches.search-results button { grid-template-columns: minmax(0, 1fr); min-height: 54px; }
+.import-matches.search-results small { white-space: normal; overflow-wrap: anywhere; }
+.import-source { margin: 16px 0; color: var(--muted); font-size: 13px; }
+.import-source summary { cursor: pointer; min-height: 44px; padding: 12px 0; }
+.import-source blockquote { margin: 0 0 10px; padding: 12px; border-left: 2px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere; }
+.import-source button { min-height: 44px; }
+.import-save { width: 100%; margin-top: 22px; }
+
+/* Prefer Netlify's supported project-level badge Off setting. If enabled, the
+   observed public frame gets its own bottom lane (92px frame + 12px gap).
+   Reserve space only while that frame exists, including late injection and
+   dismissal. Never alter the private owner toolbar or iframe contents. */
+body:has(> iframe#nl-badge-frame) { --netlify-badge-clearance: 104px; }
+#root { padding-bottom: var(--netlify-badge-clearance); }
+iframe#nl-badge-frame {
+  position: fixed !important;
+  inset: auto 0 env(safe-area-inset-bottom, 0px) auto !important;
+  z-index: 12 !important;
+}
+.public-shell .mode-switch,
+.public-shell .mode-switch.map-mode { bottom: calc(16px + env(safe-area-inset-bottom) + var(--netlify-badge-clearance)); }
+.public-shell .map-wrap .maplibregl-ctrl-bottom-left { bottom: calc(80px + env(safe-area-inset-bottom) + var(--netlify-badge-clearance)); }
+.public-shell .locate-button { bottom: calc(184px + env(safe-area-inset-bottom) + var(--netlify-badge-clearance)); }
+.editor-shell .floating-add { bottom: calc(72px + env(safe-area-inset-bottom) + var(--netlify-badge-clearance)); }
+@media (max-width: 520px) {
+  .editor-shell .floating-add { bottom: calc(92px + env(safe-area-inset-bottom) + var(--netlify-badge-clearance)); }
+}
 .first-place-body .status-message { overflow-wrap: anywhere; }
 .first-place-body input { scroll-margin-top: 12px; }
 @media (max-width: 520px) {

@@ -1,4 +1,5 @@
 import { guideTitle, guideDescription, requestShareContent, requestDescription } from '../../shared/share-copy.mjs'
+import { displayCityName } from '../../shared/city-names.mjs'
 
 // Shared routes have metadata in their initial HTML, for every user agent.
 // This also covers messaging crawlers whose user-agent names may change.
@@ -16,7 +17,8 @@ function replaceMeta(html, attribute, name, content) {
   return pattern.test(html) ? html.replace(pattern, () => tag) : html.replace('</head>', () => `    ${tag}\n  </head>`)
 }
 
-export function renderGuidePreview(html, { author, city, url, locale = 'en', note = '' }) {
+export function renderGuidePreview(html, { author, city, country, url, locale = 'en', note = '' }) {
+  city = displayCityName(city, country)
   const title = guideTitle(author, city, locale)
   const description = guideDescription(author, city, locale, note)
   let result = html.replace(/<title>[^<]*<\/title>/i, () => `<title>${escapeHtml(title)}. Anyone’s Guide</title>`)
@@ -154,7 +156,7 @@ export default async function guidePreview(request, context) {
     profile = await response.json()
     if (!profile) return
     ;[guide] = await getRows(baseUrl, key, 'guides', {
-      select: 'city,guide_note,intro', owner_id: `eq.${profile.id}`, slug: `eq.${guideSlug}`,
+      select: 'city,country,guide_note,intro', owner_id: `eq.${profile.id}`, slug: `eq.${guideSlug}`,
       visibility: 'in.(unlisted,public)',
     })
     if (!guide?.city) return
@@ -166,6 +168,7 @@ export default async function guidePreview(request, context) {
   return previewResponse(context, html => renderGuidePreview(html, {
     author: profile.display_name,
     city: guide.city,
+    country: guide.country,
     url: request.url,
     locale: requestUrl.searchParams.get('lang') === 'pl' ? 'pl' : 'en',
     note: guide.guide_note || guide.intro || '',
