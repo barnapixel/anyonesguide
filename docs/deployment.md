@@ -1,3 +1,13 @@
+# Deploying v0.8.8
+
+Use [the current upgrade and VS Code merge command](../UPGRADE-v0.8.8-inline-guide-map.md). No new SQL, dependency, auth redirect or variable is required on working v0.8.7. The ZIP merge does not push or deploy. Use the existing source workflow when ready; build command `npm run build`, publish directory `dist`.
+
+For screenshot/message import, save both existing server variables in Netlify before one source deploy: `GEMINI_API_KEY` and `RECOMMENDATION_IMPORT_ENABLED=true`, with Functions included in scope and Production values. The complete source already supplies the function and redirects; no manually created function. A key in `.env.local` alone does not configure production. Live extraction is unverified here.
+
+Nothing was deployed or migrated by the assistant. The historical setup below remains for older versions.
+
+## Historical v0.8.5 deployment instructions
+
 # Deploying v0.8.5
 
 Use [UPGRADE-v0.8.5-screenshot-import.md](../UPGRADE-v0.8.5-screenshot-import.md) for current environment setup and acceptance. Merge the complete source, retain local credentials and repository metadata, run `npm ci`, `npm test`, and `npm run build`, then deploy through the existing Netlify source workflow.

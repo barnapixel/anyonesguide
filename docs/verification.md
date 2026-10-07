@@ -1,3 +1,15 @@
+# Verification for v0.8.8
+
+163 automated tests pass with zero failures, skips or cancellations. Three targeted reader interaction cases were added with an explicit MapLibre boundary fixture. They cover map-instance reuse and state/focus/position restoration, shortcut visibility, and readable fallback when WebGL is unavailable. The existing 160 cases remain. TypeScript/Vite production build passes with the known main/MapLibre chunk warnings.
+
+Local Chromium rendered the actual reader and real MapLibre WebGL at 320/390/768px in EN/PL with raster requests intercepted to fixture images. All six combinations passed ordering, category/expanded-note/position/focus restoration, single-canvas expansion, dialog Escape, shortcut, simulated badge clearance and one-place/empty-guide checks. A separate failed map-chunk browser case passed. Final screenshots were visually inspected. This verifies browser geometry and the actual map renderer, not live tiles, OCR, provider quality or real phones.
+
+Version files are 0.8.8. Dependency pins, all ten migrations, server/configuration files, shared copy and first-save/editor code are identical to v0.8.7. Existing dictionary entries are unchanged; two EN/PL reader-label pairs were added. No credentials, deployment output or test harness is packaged.
+
+Still outstanding: real Android/iOS and touch/browser chrome/safe areas, live maps/search and the actual provider badge, Gemini/OCR, deployed Netlify routing/quota/rate limiting, live auth/sharing/recovery. No paid API or external account action occurred. See [the v0.8.8 upgrade](../UPGRADE-v0.8.8-inline-guide-map.md).
+
+## Historical v0.8.7 evidence
+
 # Verification for v0.8.7
 
 The existing 160 automated tests pass with zero failures, skips or cancellations. No new automated suite cases were added for the small presentation change. TypeScript/Vite production build passes, with the retained main/MapLibre chunk warnings. Dependency pins, all ten migrations, server/configuration files, English/Polish copy and first-save/editor behaviour are unchanged.

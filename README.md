@@ -1,6 +1,6 @@
-# Anyone’s Guide v0.8.7. Fully integrated source
+# Anyone’s Guide v0.8.8. Fully integrated source
 
-v0.8.7 puts the author’s own note directly under each venue name, ahead of location details, in both list cards and place details. The collapsed From [author] preview now shows up to two lines. First-save behaviour and the latest EN/PL copy remain unchanged. See [the current upgrade and Gemini reminder](UPGRADE-v0.8.7-personal-recommendations.md).
+v0.8.8 puts the exact optional author note directly below the title, then a compact inline map, category filters and places. The bottom-right Explore map cue opens the same map in a full viewport view. Back to guide restores the category, expanded note and reading position. A contextual Map shortcut replaces the persistent List/Map selector. Preview gestures are disabled, and provider credits remain clickable below it. See [the upgrade and one-line VS Code command](UPGRADE-v0.8.8-inline-guide-map.md).
 
 Optional screenshot and pasted-message import now sit alongside direct place search. The first screen keeps the latest EN/PL question and examples, with a short reassurance and “Upload a screenshot to get started”. There is no extra mandatory onboarding screen.
 
@@ -16,11 +16,11 @@ Venue photos remain a researched proposal. No photo provider, schema change, acc
 
 ## Complete source package
 
-The archive contains one `anyones-guide-v0.8.7-integrated/` folder with the complete cumulative source, tests, configuration, all ten unchanged migrations and existing static assets. No earlier patch is needed. Package and lockfile are **0.8.7**. Dependency pins are unchanged.
+The archive contains one `anyones-guide-v0.8.8-integrated/` folder with the complete cumulative source, tests, configuration, all ten unchanged migrations and existing static assets. No earlier patch is needed. Package and lockfile are **0.8.8**. Dependency pins are unchanged.
 
 Merge its contents into your existing project root, keeping local credentials, Git metadata and Netlify settings. Review any overlapping manual edits. No new SQL or auth redirects are required on a working v0.8.4 database.
 
-**New server setup is required:** set `GEMINI_API_KEY` and `RECOMMENDATION_IMPORT_ENABLED=true` in Netlify’s environment settings with Functions included in scope (Free defaults to all scopes). The key must never have a `VITE_` prefix. See [setup and acceptance](UPGRADE-v0.8.7-personal-recommendations.md) before deployment. Changing function variables requires a new deploy. Deploy the source project so the new Netlify Function is included; uploading only `dist` does not install it.
+**New server setup is required:** set `GEMINI_API_KEY` and `RECOMMENDATION_IMPORT_ENABLED=true` in Netlify’s environment settings with Functions included in scope (Free defaults to all scopes). The key must never have a `VITE_` prefix. See [setup and acceptance](UPGRADE-v0.8.8-inline-guide-map.md) before deployment. Changing function variables requires a new deploy. Deploy the source project so the new Netlify Function is included; uploading only `dist` does not install it.
 
 ```sh
 npm ci
@@ -31,9 +31,9 @@ npm run dev
 
 `npm run dev` runs the frontend. For local import requests, use `npx netlify dev` with the server environment configured, and open the URL it reports. No Gemini key is included in this archive.
 
-**160 automated tests pass**, including actual React/store interaction tests, disposable PostgreSQL migration tests and mocked provider requests. The TypeScript/Vite build passes. Live Gemini extraction, Netlify routing/rate limiting and phone layout/keyboard/badge checks are still outstanding. Six local Chromium viewport/language checks passed for the actual reader components with fixture data at 320/390/768 px in EN/PL. These are simulated browser widths, not actual mobile devices. Nothing was deployed or migrated live.
+**163 automated tests pass**, including three focused reader/map cases and the existing React/store, disposable PostgreSQL and mocked import/provider coverage. The TypeScript/Vite build passes. Six local Chromium layouts passed at 320/390/768px in EN/PL with actual MapLibre WebGL and intercepted fixture tiles. A separate map-chunk failure check passed. Real phones, touch gestures, live maps/badge, Gemini/OCR and deployed functions remain outstanding. Nothing was deployed or migrated live.
 
-See [the current handover](docs/anyones-guide-handover-v0.8.7.md) for scope and working style. Historical v0.8.4 upgrade notes remain as history and are superseded by this release.
+See [the current handover](docs/anyones-guide-handover-v0.8.8.md) for scope and working style. Historical v0.8.4 upgrade notes remain as history and are superseded by this release.
 
 ## Copy locations
 

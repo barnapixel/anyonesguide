@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import {JSDOM} from 'jsdom'
 import {createServer} from 'vite'
 import React,{act} from 'react'
-let server,dom,root,createRoot,I18nProvider,Editor,PlaceSheet,ProfileIdentity,AddPlaces,PublicGuide,Home,Login,PageError,App,AuthProvider,GuestResponsePage,patchPlace
+let server,dom,root,createRoot,I18nProvider,Editor,PlaceSheet,ProfileIdentity,AddPlaces,PublicGuide,Home,Login,PageError,App,AuthProvider,GuestResponsePage,patchPlace,mapControls
 const guide={id:'test',ownerId:'owner',city:'Warsaw',country:'Poland',slug:'warsaw',authorName:'Ada',title:'Warsaw',intro:'',guideNote:'',center:{lat:52,lng:21},categories:[{id:'eat',label:'Eat',icon:'x',sortOrder:0}],places:[{id:'one',name:'Venue',address:'Street',lat:52,lng:21,categoryId:'eat',note:'Long note '.repeat(500)}],visibility:'unlisted',isPublished:true,updatedAt:new Date().toISOString()}
 const noOp=()=>{}
 const editorProps={guide,onNavigate:noOp,onUpdatePlace:noOp,onUpdateGuideNote:noOp,onRemovePlace:noOp,onMovePlace:noOp,onReorderPlace:noOp,backPath:'/creator',previewPath:'/preview/test',publicPath:'/ada/warsaw',addPath:'/edit/test/add'}
@@ -23,14 +23,15 @@ before(async()=>{
  ;({createRoot}=await import('react-dom/client'));root=createRoot(document.getElementById('app'))
  server=await createServer({envDir:false,server:{middlewareMode:true,hmr:false,ws:false},appType:'custom',plugins:[{
   name:'dom-test-configuration',enforce:'pre',
-  resolveId(id){if(id==='virtual:dom-test-config')return '\0'+id},
-  load(id){if(id==='\0virtual:dom-test-config')return `export const appConfig={cloudEnabled:false,geoapifyEnabled:false,geoapifyApiKey:'',supabaseUrl:'',supabasePublishableKey:'',privacyOperator:'',privacyEmail:''};`},
-  transform(source,id){if(id.includes('/src/')&&(/\.(tsx|ts)$/.test(id)))return source.replaceAll(/(['"])(?:\.\.\/|\.\/)config\1/g,"'virtual:dom-test-config'")},
+  resolveId(id){if(id==='virtual:dom-test-map')return '\0dom-test-map';if(id==='virtual:dom-test-config')return '\0'+id},
+  load(id){if(id==='\0dom-test-map')return `export * from '/tests/helpers/maplibre.mjs';`;if(id==='\0virtual:dom-test-config')return `export const appConfig={cloudEnabled:false,geoapifyEnabled:false,geoapifyApiKey:'',supabaseUrl:'',supabasePublishableKey:'',privacyOperator:'',privacyEmail:''};`},
+  transform(source,id){if(id.includes('/src/')&&(/\.(tsx|ts)$/.test(id)))return source.replaceAll(/(['"])maplibre-gl\1/g,"'virtual:dom-test-map'").replaceAll(/(['"])(?:\.\.\/|\.\/)config\1/g,"'virtual:dom-test-config'")},
  }]})
+ ;({controls:mapControls}=await server.ssrLoadModule('/tests/helpers/maplibre.mjs'))
  ;({Home}=await server.ssrLoadModule('/src/components/Home.tsx'));({Login}=await server.ssrLoadModule('/src/components/Login.tsx'));({PageError}=await server.ssrLoadModule('/src/components/PageError.tsx'));({default:App}=await server.ssrLoadModule('/src/App.tsx'));({AuthProvider}=await server.ssrLoadModule('/src/hooks/useAuth.tsx'));;({I18nProvider}=await server.ssrLoadModule('/src/i18n.tsx'));({Editor}=await server.ssrLoadModule('/src/components/Editor.tsx'));({PlaceSheet}=await server.ssrLoadModule('/src/components/PlaceSheet.tsx'));({ProfileIdentity}=await server.ssrLoadModule('/src/components/ProfileIdentity.tsx'));({AddPlaces}=await server.ssrLoadModule('/src/components/AddPlaces.tsx'));({PublicGuide}=await server.ssrLoadModule('/src/components/PublicGuide.tsx'))
  ;({GuestResponsePage}=await server.ssrLoadModule('/src/components/GuestResponsePage.tsx'));({patchPlace}=await server.ssrLoadModule('/src/utils/guideEditing.ts'))
 })
-afterEach(async()=>{await act(async()=>root.render(null));localStorage.clear()})
+afterEach(async()=>{await act(async()=>root.render(null));localStorage.clear();mapControls.fail=false})
 after(async()=>{await act(async()=>root.unmount());await server.close();dom.window.close()})
 test('Editor waits for all saves before Preview and keeps the task open after failure',async()=>{
  let navigate=[],resolve;let pending=new Promise(r=>resolve=r)
@@ -161,4 +162,57 @@ test('a guest pick is stored immediately and reaches the real preview and one-pl
  await render(React.createElement(GuestResponsePage,{...props,mode:'preview'}))
  assert.ok(document.querySelector('.author-pick-icon'));assert.equal(document.querySelector('.finish-action').disabled,false)
  await click(document.querySelector('.finish-action'));assert.deepEqual(routes,[path+'/preview',path+'/finish'])
+})
+
+
+const readerProps = current => ({guide:current,userLocation:{lat:52,lng:21},locationStatus:'ready',onRequestLocation:noOp,onNavigate:noOp,trackUsage:false})
+const waitForMap = async () => {
+ for(let i=0;i<30&&!document.querySelector('.map-canvas canvas');i++)await act(async()=>{await new Promise(resolve=>setTimeout(resolve,10))})
+ assert.ok(document.querySelector('.map-canvas canvas'))
+}
+test('reader preview reuses its map and preserves categories, expanded note, focus and reading position on return',async()=>{
+ const current={...guide,guideNote:'Exact author words.',categories:[...guide.categories,{id:'coffee',label:'Coffee',sortOrder:1}],places:[...guide.places,{...guide.places[0],id:'two',categoryId:'coffee'}]}
+ await render(React.createElement(PublicGuide,readerProps(current)));await waitForMap()
+ const map=mapControls.instances.at(-1),count=mapControls.instances.length
+ assert.equal(document.querySelector('.guide-hero h1').nextElementSibling.className,'guide-note-card')
+ assert.equal(document.querySelector('.guide-map-section').nextElementSibling.className,'guide-filters')
+ assert.equal(document.querySelector('.mode-switch'),null);assert.equal(map.dragPan.active,false)
+ assert.ok([...document.querySelectorAll('.map-pin')].every(button=>button.disabled&&button.tabIndex===-1))
+ await click(document.querySelector('.guide-note-card summary'))
+ await click(document.querySelectorAll('.guide-filters .chip')[2]);assert.equal(document.querySelectorAll('.place-row').length,1)
+ const opener=document.querySelector('.map-preview-open');opener.focus()
+ const scrolls=[];window.scrollTo=options=>scrolls.push(options.top);Object.defineProperty(window,'scrollY',{configurable:true,value:345})
+ await click(opener)
+ assert.equal(mapControls.instances.length,count);assert.equal(map.dragPan.active,true)
+ assert.equal(document.querySelector('.map-toolbar .chip.active').textContent,'Coffee')
+ assert.ok(document.querySelector('.map-back'));assert.equal(document.querySelector('.guide-list').hidden,true)
+ await click(document.querySelector('.map-pin'))
+ await act(async()=>document.querySelector('dialog').dispatchEvent(new window.Event('cancel',{cancelable:true})))
+ assert.ok(document.querySelector('.map-back'))
+ await act(async()=>window.dispatchEvent(new window.KeyboardEvent('keydown',{key:'Escape'})))
+ assert.equal(document.querySelector('.map-back'),null);assert.equal(mapControls.instances.length,count);assert.equal(map.dragPan.active,false)
+ assert.equal(document.querySelector('.guide-note-card').open,true);assert.equal(document.querySelector('.guide-filters .chip.active').textContent,'Coffee')
+ assert.equal(document.activeElement,document.querySelector('.map-preview-open'));assert.equal(scrolls.at(-1),345)
+ window.scrollTo=noOp
+})
+test('the reader map shortcut appears only after the preview leaves above the viewport',async()=>{
+ await render(React.createElement(PublicGuide,readerProps(guide)));await waitForMap()
+ const preview=document.querySelector('.guide-map-section')
+ preview.getBoundingClientRect=()=>({bottom:900});await act(async()=>window.dispatchEvent(new window.Event('scroll')))
+ assert.equal(document.querySelector('.map-shortcut'),null)
+ preview.getBoundingClientRect=()=>({bottom:20});await act(async()=>window.dispatchEvent(new window.Event('scroll')))
+ assert.equal(document.querySelector('.map-shortcut'),null)
+ preview.getBoundingClientRect=()=>({bottom:-1});await act(async()=>window.dispatchEvent(new window.Event('scroll')))
+ assert.ok(document.querySelector('.map-shortcut'));await click(document.querySelector('.map-shortcut'));assert.ok(document.querySelector('.map-back'))
+})
+test('unsupported WebGL leaves the guide readable and the map closable in EN and PL',async()=>{
+ mapControls.fail=true
+ for(const locale of ['en','pl']) {
+  await act(async()=>root.render(null));localStorage.setItem('anyones-guide:locale',locale)
+  await render(React.createElement(PublicGuide,readerProps(guide)))
+  for(let i=0;i<30&&!document.querySelector('.map-error');i++)await act(async()=>{await new Promise(resolve=>setTimeout(resolve,10))})
+  assert.ok(document.querySelector('.map-error'));assert.ok(document.querySelector('.place-row'))
+  assert.equal(document.querySelector('.map-preview-cue').textContent.trim(),locale==='en'?'Explore map':'Zobacz na mapie')
+  await click(document.querySelector('.map-preview-open'));await click(document.querySelector('.map-back'));assert.equal(document.querySelector('.guide-list').hidden,false)
+ }
 })
