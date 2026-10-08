@@ -83,7 +83,10 @@ function fitPlaces(map: Map, guide: Guide, places: Place[], animate: boolean, pa
 
   const bounds = new LngLatBounds()
   for (const place of places) bounds.extend([place.lng, place.lat])
-  map.fitBounds(bounds, { padding, maxZoom: 14.6, duration })
+  // MapLibre adds fitBounds padding to the camera's existing edge padding.
+  // Set the usable area once; supplying it again makes a short preview too wide.
+  map.setPadding(padding)
+  map.fitBounds(bounds, { maxZoom: 14.6, duration })
 }
 
 function isUserNearGuide(userLocation: Coordinates, places: Place[]) {

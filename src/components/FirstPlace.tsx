@@ -8,6 +8,7 @@ import { clearFirstPlaceDraft, loadFirstPlaceDraft, saveFirstPlaceDraft, type Fi
 import type { Guide, Place, PlaceSearchResult } from '../types'
 import { RecommendationImport } from './RecommendationImport'
 import { loadImportDraft } from '../services/recommendationImport'
+import { FirstPlaceIllustration } from './FirstPlaceIllustration'
 
 type Props = {
   guide: Guide
@@ -22,6 +23,8 @@ type Props = {
 
 export function FirstPlace({ guide, scope, context, localOnly = false, storageUnavailable = false, onBack, onSave, onSaved }: Props) {
   const { t } = useI18n()
+  // Keep the same artwork when selection/import hides it and when language changes.
+  const [illustrationChoice] = useState(() => Math.floor(Math.random() * 3))
   const [draft, setDraft] = useState<FirstPlaceDraft>(() => loadFirstPlaceDraft(scope) ?? { query: '', selected: null, note: '', updatedAt: Date.now() })
   const draftRef = useRef(draft)
   const [durable, setDurable] = useState(() => !storageUnavailable && saveFirstPlaceDraft(scope, draft))
@@ -95,7 +98,7 @@ export function FirstPlace({ guide, scope, context, localOnly = false, storageUn
     </header>
     <section className="first-place-body">
       {!importOpen && <h1>{t('first.question')}</h1>}
-      {!draft.selected && !importOpen && <><p className="first-place-examples">{t('first.examples')}</p><p className="first-place-reassurance">{t('first.reassurance')}</p></>}
+      {!draft.selected && !importOpen && <><FirstPlaceIllustration choice={illustrationChoice} /><p className="first-place-reassurance">{t('first.reassurance')}</p></>}
       {!draft.selected ? <>
         {!importOpen && <>
         <div className="search-box">

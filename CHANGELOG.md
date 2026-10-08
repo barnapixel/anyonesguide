@@ -1,3 +1,17 @@
+# v0.8.9. A personal first place and a compact reader
+
+- Replace first-place examples with one of three approved illustrations, stable for the visit. Use English graphics in EN and PL. Keep the existing question, reassurance, direct search and optional import.
+- Reduce the reader title and introductory whitespace; remove the total place-count line while retaining Save guide, author notes, category counts and stars.
+- Correct double-counted map padding so the preview fits its pins usefully, including category changes and resizing. Preserve one-map expansion and return state.
+- Condense only reliable address suffixes in venue rows and retain complete stored addresses in details and directions.
+- 164 automated tests and production build pass. No dependency, SQL, environment, server or hosting change. No deployment.
+
+# v0.8.8. Inline guide map
+
+- Place the optional author note below the title, then an inline map, categories and recommendations.
+- Expand the same map full-screen and restore category, expanded note, position and focus on return. Keep a contextual Map shortcut and readable failure fallback.
+- 163 automated tests and production build passed; six simulated EN/PL browser layouts and map-chunk failure passed. Live/mobile checks remained outstanding.
+
 # v0.8.7. Personal recommendations first
 
 - Show exact author notes directly beneath venue names, ahead of location details, in list cards and list/map place details.

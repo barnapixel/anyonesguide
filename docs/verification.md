@@ -1,3 +1,19 @@
+# Verification for v0.8.9
+
+164 automated tests pass with zero failures, skips or cancellations. One table-driven address case was added, covering exact Warsaw/Paris suffixes, semantic subtitles and unknown/different-city international formats. Existing first-place interaction coverage now checks the English illustration in both languages, stability while typing and after Change, omission during selection/import review, and the retained explicit save flows. Existing reader coverage checks removal of total place count and padding supplied once. Owner, guest, local, import/recovery, sharing, and disposable PostgreSQL coverage remains. The suite ran once after implementation, in 20.7 seconds. TypeScript/Vite production build passes with the retained main/MapLibre chunk-size warnings. No dependency upgrade.
+
+Local Chromium rendered actual components and actual MapLibre WebGL at 320/390/768px in EN/PL. All six reader combinations passed ordering, lack of horizontal overflow, accessible attribution, disabled preview gestures/pins, single-canvas expansion, note/category/scroll/focus restoration, nested dialog Escape, contextual shortcut, simulated badge clearance, and one-place/empty-guide cases. Projected fixture pins fit within the preview's padding. The 320px Warsaw fixture frames at zoom 12.478 instead of the old double-padding calculation's 11.143, using 106 rather than 42 vertical pixels. Raster requests were intercepted with fixture images; this is not live map evidence.
+
+All 18 first-place combinations passed: three approved graphics at three widths in two languages. Images loaded, the approved order held, search/upload stayed within the tested 844px viewport and there was no horizontal overflow. The English graphic and alt text stayed unchanged across a language toggle, typing and selection/Change. Explicit save produced the real editor row with its name and optional author note. Search responses were intercepted with fixtures. Existing automated cases also cover cloud/guest/local failures, retries, note retention and optional screenshot/message review. Browser creation QA used the actual Editor with a controlled local save callback, not a live backend or device keyboard.
+
+A separate map-chunk failure browser case passed: the guide remained readable, and full-screen map fallback remained closable. EN/PL reader and all three onboarding variants were visually inspected. Provider badge checks use a simulated frame, not a live Netlify badge. Illustrations were losslessly encoded to WebP and pixel equality against the approved source images was verified. Only the chosen illustration loads during a visit; its compressed file is approximately 0.8 to 1.0 MB.
+
+Package and lockfile are 0.8.9. Lockfile changes only the root version. All ten migrations, dependencies, netlify.toml, Vite configuration, server handlers, shared sharing/invitation copy and src/i18n.tsx are unchanged from v0.8.8. No credentials, dependencies, deployment output or browser harness are packaged. PowerShell update command reviewed, not executed on Windows here.
+
+Still outstanding: real Android/iOS, touch/browser chrome/safe areas/keyboards, live Geoapify search/tiles and actual Netlify badge, Gemini/OCR, deployed function routing/quota/rate limiting and live auth/sharing/recovery. No paid API, deployment, live migration or external account mutation occurred. See [the v0.8.9 upgrade](../UPGRADE-v0.8.9-personal-start-and-guide.md).
+
+## Historical v0.8.8 evidence
+
 # Verification for v0.8.8
 
 163 automated tests pass with zero failures, skips or cancellations. Three targeted reader interaction cases were added with an explicit MapLibre boundary fixture. They cover map-instance reuse and state/focus/position restoration, shortcut visibility, and readable fallback when WebGL is unavailable. The existing 160 cases remain. TypeScript/Vite production build passes with the known main/MapLibre chunk warnings.

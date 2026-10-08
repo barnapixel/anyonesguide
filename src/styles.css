@@ -1453,3 +1453,17 @@ iframe#nl-badge-frame {
   .map-toolbar-heading { gap: 6px; }
   .map-back { font-size: 11px; padding-inline: 10px; }
 }
+
+/* v0.8.9: a personal first place and a more compact reader introduction. */
+.first-place-illustration { display: block; width: 100%; height: auto; margin: 0 0 18px; border-radius: 12px; }
+.first-place-reassurance { margin: 0 0 20px; }
+.public-shell .guide-hero { padding-top: 30px; }
+.public-shell .guide-hero h1 { font-size: clamp(36px, 7vw, 48px); line-height: 1.03; letter-spacing: -.035em; }
+.public-shell .guide-hero .guide-note-card { margin: 16px 0 12px; }
+.public-shell .guide-meta-row { margin-top: 12px; margin-bottom: 12px; }
+.public-shell .author-picks-key { color: var(--muted); margin-bottom: 16px; }
+.public-shell .author-picks-key .copy-emote { font-size: 14px; }
+@media (max-width: 520px) {
+  .public-shell .guide-hero { padding-top: 22px; }
+  .public-shell .guide-hero h1 { font-size: clamp(32px, 9vw, 40px); }
+}

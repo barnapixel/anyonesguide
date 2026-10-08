@@ -39,7 +39,7 @@ type Props = {
 }
 
 export function PublicGuide({ guide, userLocation, locationStatus, onRequestLocation, onNavigate, editPath, topActionPath, topActionLabel, recipientCreateAction = false, trackUsage = true, allowSave = false, finishAction = false, titleOverride }: Props) {
-  const { t, locale, categoryLabel, placeCountLabel } = useI18n()
+  const { t, locale, categoryLabel } = useI18n()
   const [mode, setMode] = useState<'list' | 'map'>('list')
   const [category, setCategory] = useState<CategoryId | 'all'>('all')
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null)
@@ -172,15 +172,12 @@ export function PublicGuide({ guide, userLocation, locationStatus, onRequestLoca
             </details>
           )}
         {guide.intro && <p>{guide.intro}</p>}
-        <div className="guide-meta-row">
-          <div className="place-count">{guide.places.length} {placeCountLabel(guide.places.length)}</div>
-          {allowSave && guide.profileSlug && (
+        {allowSave && guide.profileSlug && <div className="guide-meta-row">
             <button className={`save-guide-button ${saved ? 'saved' : ''}`} onClick={toggleSaved} aria-pressed={saved}>
               {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
               <span>{saved ? t('saved.saved') : t('saved.save')}</span>
             </button>
-          )}
-        </div>
+        </div>}
         {saveError && <p className="saved-action-error" role="alert">{t('saved.storageError')}</p>}
       </header>
 
@@ -203,7 +200,7 @@ export function PublicGuide({ guide, userLocation, locationStatus, onRequestLoca
             <div className="category-section" key={group.id}>
               <h2>{categoryLabel(group)} <span>· {group.places.length}</span></h2>
               <div className="place-list">
-                {group.places.map(place => <PlaceRow key={place.id} place={place} category={group} userLocation={userLocation} onClick={() => openPlace(place)} />)}
+                {group.places.map(place => <PlaceRow key={place.id} place={place} category={group} city={guide.city} country={guide.country} userLocation={userLocation} onClick={() => openPlace(place)} />)}
               </div>
             </div>
           ))}

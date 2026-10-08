@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises'
 async function load(file) { const source = (await readFile(new URL(file,import.meta.url),'utf8')).replace('../../shared/city-names.mjs',new URL('../shared/city-names.mjs',import.meta.url).href); return import('data:text/javascript,'+encodeURIComponent(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText)) }
 const { GuideSaveQueue, getGuideSaveQueue, flushActiveGuideSaves } = await load('../src/services/guideSaves.ts')
 const { reorderPlaces, patchPlace } = await load('../src/utils/guideEditing.ts')
+const { compactPlaceLocation } = await load('../src/utils/placeLocation.ts')
 const { mapsUrl } = await load('../src/utils/maps.ts')
 const { formatDistance } = await load('../src/utils/distance.ts')
 const { safeDecode, normalizePath } = await load('../src/utils/routes.ts')
@@ -56,4 +57,24 @@ test('a failed journal for an unavailable closed guide does not trap unrelated n
  const user='navigation-test',q=getGuideSaveQueue(user,'deleted-guide',async()=>{throw Error('gone')})
  q.stage(edit(1,{note:'recoverable'}));await assert.rejects(q.flush());await flushActiveGuideSaves(user)
  const release=q.activate();await assert.rejects(flushActiveGuideSaves(user));release();await flushActiveGuideSaves(user);assert.equal(q.getSnapshot().edits[0].note,'recoverable')
+})
+
+// Exact known suffixes can be condensed. Unrecognised geography and semantic
+// subtitles stay verbatim; stored data remains available to the place sheet.
+test('place rows shorten reliable city suffixes without guessing international addresses', () => {
+ const cases = [
+  ['Koszykowa 1, 00-564 Warsaw, Poland', 'Warsaw', 'Poland', 'Koszykowa 1'],
+  ['222 Rue Saint-Denis, 75002 Paris, France', 'Paris', 'France', '222 Rue Saint-Denis'],
+  ['Pierogi · Śródmieście', 'Warsaw', 'Poland', 'Pierogi · Śródmieście'],
+  ['1 Main Street, Cambridge, MA 02138, United States', 'Cambridge', 'United States', '1 Main Street, Cambridge, MA 02138, United States'],
+  ['東京都新宿区西新宿2丁目', 'Tokyo', 'Japan', '東京都新宿区西新宿2丁目'],
+  ['Museum of Warsaw', 'Warsaw', 'Poland', 'Museum of Warsaw'],
+  ['High Street, Oxford, United Kingdom', 'London', 'United Kingdom', 'High Street, Oxford, United Kingdom'],
+ ]
+ for (const [subtitle,city,country,expected] of cases) {
+  const place = { name: 'Regina', subtitle, address: subtitle }
+  assert.equal(compactPlaceLocation(place, city, country), expected)
+  assert.equal(place.address, subtitle)
+ }
+ assert.equal(compactPlaceLocation({name:'Regina',subtitle:'00-564 Warsaw, Poland',address:'Regina, Koszykowa 1, 00-564 Warsaw, Poland'},'Warsaw','Poland'),'Koszykowa 1')
 })

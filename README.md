@@ -1,8 +1,8 @@
-# Anyone’s Guide v0.8.8. Fully integrated source
+# Anyone’s Guide v0.8.9. Fully integrated source
 
-v0.8.8 puts the exact optional author note directly below the title, then a compact inline map, category filters and places. The bottom-right Explore map cue opens the same map in a full viewport view. Back to guide restores the category, expanded note and reading position. A contextual Map shortcut replaces the persistent List/Map selector. Preview gestures are disabled, and provider credits remain clickable below it. See [the upgrade and one-line VS Code command](UPGRADE-v0.8.8-inline-guide-map.md).
+v0.8.9 gives the first-place screen one of three approved illustrated maps, selected once per visit. English graphics are used in both language versions. Existing EN/PL question and reassurance, direct search, optional screenshot import and the explicit first-save moment are preserved. The graphic replaces the examples paragraph without an extra onboarding step.
 
-Optional screenshot and pasted-message import now sit alongside direct place search. The first screen keeps the latest EN/PL question and examples, with a short reassurance and “Upload a screenshot to get started”. There is no extra mandatory onboarding screen.
+The reader has a smaller title, tighter spacing and no total place-count line. The exact author note remains below the title. The compact inline map fits relevant pins with padding counted once, then comes categories, the quieter existing starred-spots legend and recommendations. Reliable address suffixes are condensed in rows while full addresses remain in place details. Preview expansion, category/note/scroll/focus restoration and badge clearance remain. See [the upgrade and one-line VS Code command](UPGRADE-v0.8.9-personal-start-and-guide.md).
 
 Google Gemini extracts visible names and exact source text. Authors confirm each venue through the existing city-scoped Geoapify search, then choose what to save. Nothing enters a guide before explicit Save. Notes start empty; source text can be copied into a note and edited. There are no imported ratings, automatic stars, generated recommendations or rewritten notes.
 
@@ -12,15 +12,15 @@ v0.8.6 fixes familiar city labels for existing and new guides. A small, exact, c
 
 Netlify now documents a supported per-project badge Off switch. We recommend it for this app: Project configuration > General > Powered by Netlify badge > Off > Save. No redeploy is needed for that hosting setting. We did not change the account. If the public badge stays on, the app conditionally reserves a separate 104px bottom lane and moves fixed controls/map framing above it. The lane disappears when the public frame is absent or dismissed. Modals and primary fixed controls have priority over the badge. The fallback depends on observed provider markup and requires real-phone acceptance.
 
-Venue photos remain a researched proposal. No photo provider, schema change, account, paid API call or image rendering was added. See [the proposal](docs/venue-photo-proposal.md).
+Venue photos remain a researched proposal. No photo provider, schema change, account, paid API call or venue photo rendering was added. See [the proposal](docs/venue-photo-proposal.md).
 
 ## Complete source package
 
-The archive contains one `anyones-guide-v0.8.8-integrated/` folder with the complete cumulative source, tests, configuration, all ten unchanged migrations and existing static assets. No earlier patch is needed. Package and lockfile are **0.8.8**. Dependency pins are unchanged.
+The archive contains one `anyones-guide-v0.8.9-integrated/` folder with the complete cumulative source, tests, configuration, all ten unchanged migrations and existing static assets. No earlier patch is needed. Package and lockfile are **0.8.9**. Dependency pins are unchanged.
 
 Merge its contents into your existing project root, keeping local credentials, Git metadata and Netlify settings. Review any overlapping manual edits. No new SQL or auth redirects are required on a working v0.8.4 database.
 
-**New server setup is required:** set `GEMINI_API_KEY` and `RECOMMENDATION_IMPORT_ENABLED=true` in Netlify’s environment settings with Functions included in scope (Free defaults to all scopes). The key must never have a `VITE_` prefix. See [setup and acceptance](UPGRADE-v0.8.8-inline-guide-map.md) before deployment. Changing function variables requires a new deploy. Deploy the source project so the new Netlify Function is included; uploading only `dist` does not install it.
+**For screenshot/message import, existing server setup is required:** set `GEMINI_API_KEY` and `RECOMMENDATION_IMPORT_ENABLED=true` in Netlify’s environment settings with Functions included in scope (Free defaults to all scopes). The key must never have a `VITE_` prefix. See [setup and acceptance](UPGRADE-v0.8.9-personal-start-and-guide.md) before deployment. Changing function variables requires a new deploy. Deploy the source project so the included Netlify Function is included; uploading only `dist` does not install it.
 
 ```sh
 npm ci
@@ -31,9 +31,9 @@ npm run dev
 
 `npm run dev` runs the frontend. For local import requests, use `npx netlify dev` with the server environment configured, and open the URL it reports. No Gemini key is included in this archive.
 
-**163 automated tests pass**, including three focused reader/map cases and the existing React/store, disposable PostgreSQL and mocked import/provider coverage. The TypeScript/Vite build passes. Six local Chromium layouts passed at 320/390/768px in EN/PL with actual MapLibre WebGL and intercepted fixture tiles. A separate map-chunk failure check passed. Real phones, touch gestures, live maps/badge, Gemini/OCR and deployed functions remain outstanding. Nothing was deployed or migrated live.
+**164 automated tests pass**, with no failures, skips or cancellations. The TypeScript/Vite build passes with the known main/MapLibre chunk-size warnings. See [verification](docs/verification.md) for local browser evidence and outstanding live/mobile checks. Nothing was deployed or migrated live.
 
-See [the current handover](docs/anyones-guide-handover-v0.8.8.md) for scope and working style. Historical v0.8.4 upgrade notes remain as history and are superseded by this release.
+See [the current handover](docs/anyones-guide-handover-v0.8.9.md) for scope and working style. Earlier upgrade notes remain as history and are superseded by this release.
 
 ## Copy locations
 

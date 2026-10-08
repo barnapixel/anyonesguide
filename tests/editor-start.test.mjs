@@ -73,16 +73,19 @@ after(async () => { await act(async () => root.unmount()); await server.close();
 
 test('first-place search starts without categories, repeated instructions or premature controls in EN/PL', async () => {
   globalThis.__start = { routes: [] }
-  for (const [locale, question, examples] of [
-    ['en', 'What’s one place you’d recommend?', 'Great coffee, a favourite meal, or a spot worth seeing.'],
-    ['pl', 'Co polecisz znajomym?', 'Dobra kawa, ulubiony lokal albo miejsce, które warto zobaczyć.'],
+  for (const [locale, question] of [
+    ['en', 'What’s one place you’d recommend?'],
+    ['pl', 'Co polecisz znajomym?'],
   ]) {
     await act(async () => root.render(null))
     localStorage.setItem('anyones-guide:locale', locale)
     const current = { ...guide(), guideNote: 'Existing writing stays safe' }
     await render(Editor, { ...editorProps(current), onSaveFirstPlace: async () => { throw Error('Save not expected') }, key: locale })
     assert.equal(document.querySelector('.first-place-body h1').textContent, question)
-    assert.equal(document.querySelector('.first-place-examples').textContent, examples)
+    const artwork = document.querySelector('.first-place-illustration').getAttribute('src')
+    assert.ok(artwork.endsWith('.webp'))
+    assert.equal(document.querySelector('.first-place-illustration').lang, 'en')
+    assert.equal(document.querySelector('.first-place-examples'), null)
     assert.equal(document.querySelector('.editor-chips'), null)
     assert.equal(document.querySelector('.editor-top-actions'), null)
     assert.equal(document.querySelector('.editor-guide-note'), null)
@@ -93,10 +96,11 @@ test('first-place search starts without categories, repeated instructions or pre
     await click(document.querySelector('.search-box input'))
     assert.deepEqual(globalThis.__start.routes, [])
     await change(document.querySelector('.search-box input'), 'cafe')
+    assert.equal(document.querySelector('.first-place-illustration').getAttribute('src'), artwork)
     await click(await waitFor('.search-results button'))
     assert.equal(document.querySelector('.first-place-body h1').textContent, question)
     assert.equal(document.querySelector('.first-place-selected h2').textContent, result.name)
-    assert.equal(document.querySelector('.first-place-examples'), null)
+    assert.equal(document.querySelector('.first-place-illustration'), null)
     assert.equal(document.querySelector('.first-place-reassurance'), null)
     const changePlace = document.querySelector('.first-place-change')
     assert.equal(changePlace.textContent, locale === 'pl' ? 'Zmień' : 'Change')
@@ -104,6 +108,8 @@ test('first-place search starts without categories, repeated instructions or pre
     assert.equal(document.querySelectorAll('.first-place-save').length, 1)
     assert.equal(current.places.length, 0)
     assert.deepEqual(globalThis.__start.routes, [])
+    await click(changePlace)
+    assert.equal(document.querySelector('.first-place-illustration').getAttribute('src'), artwork)
   }
 })
 
@@ -361,6 +367,7 @@ const mockExtraction = (rows = imported) => {
 const startTextImport = async () => {
   await click(document.querySelector('.import-entry-link'))
   assert.equal(document.querySelector('.first-place-body > .search-box'), null)
+  assert.equal(document.querySelector('.first-place-illustration'), null)
   await click(document.querySelector('.import-switch'))
   await change(document.querySelector('.import-text-label textarea'), 'Corner Café: Great coffee. Świetna kawa. Quiet Garden: A lovely walk.')
   await click(document.querySelector('.import-save'))
