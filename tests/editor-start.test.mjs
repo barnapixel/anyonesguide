@@ -394,7 +394,7 @@ test('EN and PL import stays optional, extracts without saving and leaves every 
     const current = guide()
     await render(Editor, { ...editorProps(current), onSaveFirstPlace() { throw Error('not yet') } })
     assert.ok(document.querySelector('.first-place-reassurance'))
-    assert.equal(document.querySelector('.import-entry-link').textContent, locale === 'en' ? 'Upload a screenshot to get started' : 'Dodaj zrzut ekranu na dobry początek')
+    assert.equal(document.querySelector('.import-entry-link').textContent, locale === 'en' ? 'You can also start with a screenshot' : 'Możesz też zacząć od zrzutu ekranu')
     assert.ok(document.querySelector('.search-box input'))
     await startTextImport()
     assert.equal(globalThis.__start.importRequest.kind, 'text')

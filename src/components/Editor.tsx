@@ -334,6 +334,7 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
       {(saveError || notice) && <div role={notice && !saveError ? 'status' : 'alert'} className={`editor-save-error ${notice && !saveError ? 'notice' : ''}`}>{saveError ?? notice}</div>}
       <section className="editor-body">
         {!empty && guideNote}
+        <div className="editor-places">
         {!filtered.length && <div className="editor-category">
           {emptyCategory && <h2>{categoryLabel(emptyCategory)}</h2>}
           <div className="editor-empty-prompt">
@@ -377,6 +378,7 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
             })}
           </div>
         ))}
+        </div>
       </section>
       {filtered.length > 0 && <button className="floating-add" onClick={beginPlaceSearch}>{t('editor.addPlace')}</button>}
       {dragPreview && (

@@ -1,8 +1,8 @@
-# Anyone’s Guide v0.8.9. Fully integrated source
+# Anyone’s Guide v0.8.13
 
-v0.8.9 gives the first-place screen one of three approved illustrated maps, selected once per visit. English graphics are used in both language versions. Existing EN/PL question and reassurance, direct search, optional screenshot import and the explicit first-save moment are preserved. The graphic replaces the examples paragraph without an extra onboarding step.
+v0.8.13 adds responsive desktop layouts from 1,024px. Guides pair the personal introduction and venue list with a larger sticky overview map. Home places the existing actions beside its proposition, the editor pairs the author note with its single sortable venue list, and Your guides, Saved guides and Explore use two-column cards. The first-place screen shows its approved illustration beside search; selection and screenshot review remain focused forms. Desktop venue details open in a centred dialog.
 
-The reader has a smaller title, tighter spacing and no total place-count line. The exact author note remains below the title. The compact inline map fits relevant pins with padding counted once, then comes categories, the quieter existing starred-spots legend and recommendations. Reliable address suffixes are condensed in rows while full addresses remain in place details. Preview expansion, category/note/scroll/focus restoration and badge clearance remain. See [the upgrade and one-line VS Code command](UPGRADE-v0.8.9-personal-start-and-guide.md).
+Below 1,024px, the established layouts and copy remain. One map instance, all-pin preview, explicit Save, author words, approved English graphics in EN/PL, footer and badge clearance are preserved. No provider, dependency, SQL or environment change. See [the patch and one-line VS Code command](UPGRADE-v0.8.13-desktop-layouts.md).
 
 Google Gemini extracts visible names and exact source text. Authors confirm each venue through the existing city-scoped Geoapify search, then choose what to save. Nothing enters a guide before explicit Save. Notes start empty; source text can be copied into a note and edited. There are no imported ratings, automatic stars, generated recommendations or rewritten notes.
 
@@ -14,30 +14,30 @@ Netlify now documents a supported per-project badge Off switch. We recommend it 
 
 Venue photos remain a researched proposal. No photo provider, schema change, account, paid API call or venue photo rendering was added. See [the proposal](docs/venue-photo-proposal.md).
 
-## Complete source package
+## Patch package
 
-The archive contains one `anyones-guide-v0.8.9-integrated/` folder with the complete cumulative source, tests, configuration, all ten unchanged migrations and existing static assets. No earlier patch is needed. Package and lockfile are **0.8.9**. Dependency pins are unchanged.
+The patch archive contains one `anyones-guide-v0.8.13-patch/` folder with only files changed or added since v0.8.12. Apply it to your existing v0.8.12 project. Earlier versions need the preceding patches first. Package and lockfile become **0.8.13**. No new dependencies, SQL migrations, environment variables or hosting changes are required.
 
-Merge its contents into your existing project root, keeping local credentials, Git metadata and Netlify settings. Review any overlapping manual edits. No new SQL or auth redirects are required on a working v0.8.4 database.
+Merge its contents into your existing project root, keeping local credentials, Git metadata and Netlify settings. Review any overlapping manual edits. See `UPDATE-v0.8.13.txt` for the one-line PowerShell command. Nothing is pushed or deployed by that command.
 
-**For screenshot/message import, existing server setup is required:** set `GEMINI_API_KEY` and `RECOMMENDATION_IMPORT_ENABLED=true` in Netlify’s environment settings with Functions included in scope (Free defaults to all scopes). The key must never have a `VITE_` prefix. See [setup and acceptance](UPGRADE-v0.8.9-personal-start-and-guide.md) before deployment. Changing function variables requires a new deploy. Deploy the source project so the included Netlify Function is included; uploading only `dist` does not install it.
+**For screenshot/message import, existing server setup is required:** set `GEMINI_API_KEY` and `RECOMMENDATION_IMPORT_ENABLED=true` in Netlify’s environment settings with Functions included in scope (Free defaults to all scopes). The key must never have a `VITE_` prefix. See [Gemini setup](UPGRADE-v0.8.7-personal-recommendations.md) and the current verification note before deployment. Changing function variables requires a new deploy. Deploy the source project so the included Netlify Function is included; uploading only `dist` does not install it.
 
 ```sh
 npm ci
-npm test
+node --test tests/components.test.mjs
 npm run build
 npm run dev
 ```
 
 `npm run dev` runs the frontend. For local import requests, use `npx netlify dev` with the server environment configured, and open the URL it reports. No Gemini key is included in this archive.
 
-**164 automated tests pass**, with no failures, skips or cancellations. The TypeScript/Vite build passes with the known main/MapLibre chunk-size warnings. See [verification](docs/verification.md) for local browser evidence and outstanding live/mobile checks. Nothing was deployed or migrated live.
+**19 affected component tests pass** in this release, with no failures, skips or cancellations. The complete 167-test suite last passed in v0.8.11 and was not rerun for this small patch. The TypeScript/Vite build passes with the known main/MapLibre chunk-size warnings. See [verification](docs/verification.md) for local browser evidence and outstanding live/mobile checks. Nothing was deployed or migrated live.
 
-See [the current handover](docs/anyones-guide-handover-v0.8.9.md) for scope and working style. Earlier upgrade notes remain as history and are superseded by this release.
+See [the current handover](docs/anyones-guide-handover-v0.8.13.md) for scope and working style. Earlier upgrade notes remain as history and are superseded by this release.
 
 ## Copy locations
 
-Existing English/Polish copy is preserved. New screenshot/message and recovery wording lives under `import.*` in `src/i18n.tsx`; the additional first-screen reassurance is `first.reassurance`. Sharing and invitation previews still use `shared/share-copy.mjs`. Author-written text is never translated or rewritten. System copy avoids em dashes.
+Existing English/Polish copy is preserved, including the previously approved one-line import.start label in each language. New screenshot/message and recovery wording lives under `import.*` in `src/i18n.tsx`; the additional first-screen reassurance is `first.reassurance`. Sharing and invitation previews still use `shared/share-copy.mjs`. Author-written text is never translated or rewritten. System copy avoids em dashes.
 
 ## Features retained from v0.8
 
@@ -73,11 +73,11 @@ Guide notes stay optional and collapsed under From [author]. Legacy intro and St
 
 Cloud edits are journalled before transmission and serialised per account/guide. Failed saves retain pending values and offer Retry; reopening applies and retries them. This is pending-edit recovery, not offline editing or collaborative merging. Concurrent devices still use the last successful write.
 
-Maps retain category icons, camera behavior, same-origin worker, user-initiated location and attribution. The list footer remains in normal document flow; the map site footer is hidden. The view selector sits 16px above the safe area in both views when the public badge is absent. When present, its reserved lane is added to bottom controls and map framing. Map provider credits remain visible. Native sharing cancellation does not trigger clipboard copying. Requests still use manual messages in an existing conversation.
+Maps retain category icons, camera behavior, same-origin worker, user-initiated location and attribution. The list footer remains in normal document flow; the map site footer is hidden. The contextual Map shortcut appears after the preview scrolls out of view. Fixed Map/Add actions move above the footer when it is visible. When the public badge is present, its reserved lane is added to bottom controls and map framing. Map provider credits remain visible. Native sharing cancellation does not trigger clipboard copying. Requests still use manual messages in an existing conversation.
 
 ## Verification and rollout
 
-See [docs/verification.md](docs/verification.md) and [the v0.8.6 upgrade note](UPGRADE-v0.8.6-city-labels-and-badge.md) for current evidence and limitations. All existing migrations and dependency pins remain unchanged. v0.8.6 adds no migration; 0010 belongs to the earlier short-link release. Private draft recovery, stars, notes, existing edit RPCs, publication and consent-only analytics are retained. First-place creation and its optional note use separate existing writes with retry protection.
+See [docs/verification.md](docs/verification.md) and [the current upgrade note](UPGRADE-v0.8.13-desktop-layouts.md) for current evidence and limitations. All existing migrations and dependency pins remain unchanged. v0.8.6 adds no migration; 0010 belongs to the earlier short-link release. Private draft recovery, stars, notes, existing edit RPCs, publication and consent-only analytics are retained. First-place creation and its optional note use separate existing writes with retry protection.
 
 Stored invitations remain public by link, with no listing or direct browser table access. Short codes are random, unique, case-sensitive and immutable for a record; they are not account IDs or private draft recovery keys. Account-linked invitations disappear when their account is deleted. Anonymous invitation retention and existing creation quotas remain unchanged. This release adds no inbox, tracking, automatic sending or public directory.
 

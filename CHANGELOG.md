@@ -1,3 +1,12 @@
+# v0.8.10. Stable preview and coordinated loading
+
+- Keep the preview map and all pins stable across list filtering; full map inherits the category and retains map filtering.
+- Put readable clickable credits inside the preview with measured clearance from Explore map and pins. Lower full-map credits, preserve badge/safe-area clearance, and match Back/title heights.
+- Show only reliable streets/house numbers in venue rows; omit unknown address formats and retain full stored addresses in details/directions.
+- Coordinate initial map/image reveal with a 2.5-second limit and usable error/timeout fallbacks. Existing interaction never restarts the screen wait.
+- Shorten first-place screenshot entry to one approved EN/PL invitation without the sources helper. Keep all graphics, import and explicit-save flows.
+- 166 automated tests, production compilation, 24 responsive screen combinations and six additional browser delay/failure cases pass. No dependency, SQL, server/hosting or environment change. Nothing deployed.
+
 # v0.8.9. A personal first place and a compact reader
 
 - Replace first-place examples with one of three approved illustrations, stable for the visit. Use English graphics in EN and PL. Keep the existing question, reassurance, direct search and optional import.

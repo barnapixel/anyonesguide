@@ -151,7 +151,7 @@ export function RecommendationImport({ guide, scope, first = false, open, onOpen
 
   if (!open) return <>{fileInput}<div className="import-entry">
     <button ref={entryRef} type="button" className="text-button import-entry-link" onClick={() => { onOpenChange(true); if (!draft.rows.length) fileRef.current?.click() }}><Upload size={17} aria-hidden="true" />{t(draft.rows.length ? 'import.resume' : first ? 'import.start' : 'import.add')}</button>
-    <p>{t('import.sources')}</p>
+    {!first && <p>{t('import.sources')}</p>}
   </div></>
 
   return <>{fileInput}<section className="recommendation-import" onPaste={draft.rows.length ? undefined : paste} aria-busy={Boolean(busy)}>

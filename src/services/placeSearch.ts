@@ -47,12 +47,16 @@ export async function searchPlaces(query: string, center: Coordinates, signal?: 
       const lng = Number(result.lon)
       const name = String(result.name ?? result.address_line1 ?? 'Unnamed place')
       const address = String(result.formatted ?? result.address_line2 ?? name)
+      // Preserve the provider's structured street in the existing subtitle
+      // field. The complete formatted address remains untouched for details.
+      const street = typeof result.street === 'string' ? result.street.trim() : ''
+      const houseNumber = typeof result.housenumber === 'string' || typeof result.housenumber === 'number' ? String(result.housenumber).trim() : ''
       const sourceId = String(result.place_id ?? (result.datasource as { raw?: { osm_id?: string | number } } | undefined)?.raw?.osm_id ?? `${name}-${lat}-${lng}-${index}`)
       return {
         id: sourceId,
         provider: 'geoapify',
         name,
-        subtitle: String(result.address_line2 ?? result.city ?? ''),
+        subtitle: street ? [street, houseNumber].filter(Boolean).join(' ') : String(result.address_line2 ?? result.city ?? ''),
         address,
         lat,
         lng,

@@ -1,0 +1,7 @@
+VS Code PowerShell: run from your existing v0.8.11 project root, after downloading the patch ZIP to Downloads.
+
+& { $ErrorActionPreference='Stop'; if (!(Test-Path .\package.json)) { throw 'Run this from your existing project folder.' }; $agVersion=(Get-Content .\package.json -Raw | ConvertFrom-Json).version; if ($agVersion -notin @('0.8.11','0.8.12')) { throw 'This patch requires v0.8.11. Apply earlier patches first.' }; $agTmp=Join-Path $env:TEMP ([guid]::NewGuid().ToString()); try { Expand-Archive -LiteralPath "$env:USERPROFILE\Downloads\anyones-guide-v0.8.12-patch.zip" -DestinationPath $agTmp; Copy-Item -Path "$agTmp\anyones-guide-v0.8.12-patch\*" -Destination . -Recurse -Force } finally { if (Test-Path -LiteralPath $agTmp) { Remove-Item -LiteralPath $agTmp -Recurse -Force } } }
+
+The command preserves .env.local and Git metadata. No new dependencies, SQL or environment variables. Review overlapping manual edits before merging. Nothing is pushed or deployed.
+
+After merging, npm run build checks production compilation; npm run dev previews locally.

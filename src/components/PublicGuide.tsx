@@ -1,6 +1,6 @@
 import { orderCategoryPlaces } from '../utils/guideEditing'
-import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Bookmark, BookmarkCheck, Check, BookOpen, ChevronDown, ArrowLeft, Expand, Map as MapIcon, Pencil } from 'lucide-react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Bookmark, BookmarkCheck, Check, BookOpen, ArrowLeft, Expand, Map as MapIcon, Pencil } from 'lucide-react'
 import { CategoryChips } from './CategoryChips'
 import { PlaceRow } from './PlaceRow'
 import { PlaceSheet } from './PlaceSheet'
@@ -11,9 +11,13 @@ import { useI18n } from '../i18n'
 import { useSavedGuides } from '../hooks/useSavedGuides'
 import { guideTitle, guideDescription } from '../utils/share'
 import type { CategoryId, Coordinates, Guide, Place } from '../types'
+import { useInitialReveal } from '../hooks/useInitialReveal'
+import { InitialScreenLoading } from './InitialScreenLoading'
+import { GuideNote } from './GuideNote'
 
-function UnavailableGuideMap({ variant }: { variant?: 'preview' | 'full' }) {
+function UnavailableGuideMap({ variant, onInitialReady }: { variant?: 'preview' | 'full'; onInitialReady?: () => void }) {
   const { t } = useI18n()
+  useEffect(() => { onInitialReady?.() }, [onInitialReady])
   return <div className={`map-wrap ${variant === 'preview' ? 'map-preview' : ''}`}><div className="map-message map-error">{t('guide.mapError')}</div></div>
 }
 
@@ -46,11 +50,27 @@ export function PublicGuide({ guide, userLocation, locationStatus, onRequestLoca
   const [saveError, setSaveError] = useState(false)
   const savedGuides = useSavedGuides()
   const previewRef = useRef<HTMLElement | null>(null)
+  const toolbarRef = useRef<HTMLDivElement | null>(null)
   const readingPosition = useRef(0)
   const readingGuide = useRef(guide.id)
   const mapOpener = useRef<HTMLElement | null>(null)
   const wasMap = useRef(false)
   const [showMapShortcut, setShowMapShortcut] = useState(false)
+  const { revealed, waitExpired, release } = useInitialReveal(guide.id, guide.places.length > 0)
+
+  const revealCategory = (chip: HTMLElement | null) => {
+    const group = toolbarRef.current?.querySelector<HTMLElement>('.guide-chip-row')
+    if (!group || !chip || !group.contains(chip)) return
+    const bounds = group.getBoundingClientRect(), button = chip.getBoundingClientRect()
+    if (button.left < bounds.left) group.scrollLeft += button.left - bounds.left - 3
+    else if (button.right > bounds.right) group.scrollLeft += button.right - bounds.right + 3
+  }
+
+  useLayoutEffect(() => {
+    if (mode !== 'map') return
+    // Scroll only the category strip, leaving Back and page position fixed.
+    revealCategory(toolbarRef.current?.querySelector<HTMLElement>('.chip.active') ?? null)
+  }, [mode, category, locale])
 
   useLayoutEffect(() => {
     if (mode === 'list' && wasMap.current && readingGuide.current === guide.id) {
@@ -71,7 +91,7 @@ export function PublicGuide({ guide, userLocation, locationStatus, onRequestLoca
     window.addEventListener('scroll', update, { passive: true })
     window.addEventListener('resize', update)
     return () => { observer?.disconnect(); window.removeEventListener('scroll', update); window.removeEventListener('resize', update) }
-  }, [mode, guide.id, guide.places.length > 0])
+  }, [mode, guide.id, guide.places.length > 0, revealed])
 
   useEffect(() => {
     if (mode !== 'map' || selectedPlace) return
@@ -123,10 +143,10 @@ export function PublicGuide({ guide, userLocation, locationStatus, onRequestLoca
     }
   }
 
-  const openPlace = (place: Place) => {
+  const openPlace = useCallback((place: Place) => {
     setSelectedPlace(place)
     if (trackUsage) trackEvent('venue_opened', guide.id, { placeId: place.id, source: mode })
-  }
+  }, [trackUsage, guide.id, mode])
 
   const switchMode = (next: 'list' | 'map') => {
     if (next === 'map' && mode !== 'map') {
@@ -145,7 +165,7 @@ export function PublicGuide({ guide, userLocation, locationStatus, onRequestLoca
   }
 
   return (
-    <main className={`public-shell ${mode === 'map' ? 'map-screen' : ''}`}>
+    <main className={`public-shell ${mode === 'map' ? 'map-screen' : ''}`} aria-busy={!revealed}>
       <div className="site-masthead-wrap">
         <nav className="site-masthead" aria-label={t('common.navigation')}>
           <BrandLockup className="site-brand-lockup" compact onClick={() => onNavigate('/')} ariaLabel={t('common.home')} />
@@ -157,20 +177,11 @@ export function PublicGuide({ guide, userLocation, locationStatus, onRequestLoca
         </nav>
       </div>
 
+      {!revealed && <InitialScreenLoading />}
+      <div className={`guide-content ${!revealed ? 'visual-pending' : ''}`} inert={!revealed} aria-hidden={!revealed}>
       <header className="guide-hero">
         <h1>{publicTitle}</h1>
-          {guide.guideNote.trim() && (
-            <details className="guide-note-card" key={guide.id}>
-              <summary>
-                <span className="guide-note-summary-copy">
-                  <strong>{t('guide.fromAuthor', { name: guide.authorName })}</strong>
-                  <span className="guide-note-excerpt">{guide.guideNote.trim()}</span>
-                </span>
-                <span className="guide-note-expand">{t('guide.readNote')} <ChevronDown size={16} /></span>
-              </summary>
-              <p>{guide.guideNote.trim()}</p>
-            </details>
-          )}
+          {guide.guideNote.trim() && <GuideNote key={guide.id} authorName={guide.authorName} note={guide.guideNote} />}
         {guide.intro && <p>{guide.intro}</p>}
         {allowSave && guide.profileSlug && <div className="guide-meta-row">
             <button className={`save-guide-button ${saved ? 'saved' : ''}`} onClick={toggleSaved} aria-pressed={saved}>
@@ -183,8 +194,8 @@ export function PublicGuide({ guide, userLocation, locationStatus, onRequestLoca
 
       {guide.places.length > 0 && (
         <section ref={previewRef} className={`guide-map-section ${mode === 'map' ? 'is-full-map' : ''}`} aria-label={t('guide.map')}>
-          <Suspense fallback={<div className={`map-wrap map-loading ${mode === 'list' ? 'map-preview' : ''}`} role="status" aria-label={t('common.loading')}><div className="loading-dot" /></div>}>
-            <LazyGuideMap guide={guide} places={filtered} selectedPlace={selectedPlace} onSelectPlace={openPlace} userLocation={userLocation} locationStatus={locationStatus} onRequestLocation={onRequestLocation} variant={mode === 'list' ? 'preview' : 'full'} />
+          <Suspense fallback={waitExpired ? <UnavailableGuideMap variant={mode === 'list' ? 'preview' : 'full'} /> : <div className={`map-wrap map-loading ${mode === 'list' ? 'map-preview' : ''}`} role="status" aria-label={t('common.loading')}><div className="loading-dot" /></div>}>
+            <LazyGuideMap guide={guide} places={mode === 'list' ? guide.places : filtered} selectedPlace={mode === 'map' ? selectedPlace : null} onSelectPlace={openPlace} userLocation={userLocation} locationStatus={locationStatus} onRequestLocation={onRequestLocation} variant={mode === 'list' ? 'preview' : 'full'} onInitialReady={release} initialWaitExpired={waitExpired} />
           </Suspense>
           {mode === 'list' && <button className="map-preview-open" onClick={() => switchMode('map')} aria-label={t('guide.exploreMap')}><span className="map-preview-cue">{t('guide.exploreMap')} <Expand size={14} /></span></button>}
         </section>
@@ -207,16 +218,14 @@ export function PublicGuide({ guide, userLocation, locationStatus, onRequestLoca
       </section>
 
       {mode === 'map' && (
-        <div className="map-toolbar">
-          <div className="map-toolbar-heading">
-            <button className="map-back" autoFocus onClick={() => switchMode('list')}><ArrowLeft size={17} /><span>{t('guide.backToGuide')}</span></button>
-            <div className="map-toolbar-title">{publicTitle}</div>
-          </div>
+        <div ref={toolbarRef} className="map-toolbar" onFocusCapture={event => revealCategory(event.target.closest<HTMLElement>('.chip'))}>
+          <button className="map-back" autoFocus aria-label={t('guide.backToGuide')} title={t('guide.backToGuide')} onClick={() => switchMode('list')}><ArrowLeft size={20} aria-hidden="true" /></button>
           <CategoryChips active={category} onChange={setCategory} places={guide.places} categories={guide.categories} />
         </div>
       )}
       {mode === 'list' && showMapShortcut && guide.places.length > 0 && <button className="map-shortcut" onClick={() => switchMode('map')}><MapIcon size={17} />{t('guide.map')}</button>}
       {selectedPlace && <PlaceSheet place={selectedPlace} category={selectedCategory} userLocation={userLocation} onClose={() => setSelectedPlace(null)} guideId={trackUsage ? guide.id : undefined} />}
+      </div>
     </main>
   )
 }

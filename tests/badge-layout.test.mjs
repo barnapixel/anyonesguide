@@ -31,9 +31,10 @@ test('a late public badge reserves its lane and dismissal releases it; the priva
   } finally { dom.window.close() }
 })
 
-test('map framing preserves established geometry and leaves room for the enabled badge in either viewport', () => {
-  assert.deepEqual(mapCameraPadding(true), { top: 142, right: 34, bottom: 122, left: 34 })
-  assert.deepEqual(mapCameraPadding(false), { top: 150, right: 60, bottom: 126, left: 60 })
-  assert.deepEqual(mapCameraPadding(true, 104), { top: 142, right: 34, bottom: 226, left: 34 })
-  assert.deepEqual(mapCameraPadding(false, 104), { top: 150, right: 60, bottom: 230, left: 60 })
+test('map framing allows for the compact measured toolbar and enabled badge', () => {
+  assert.deepEqual(mapCameraPadding(true), { top: 84, right: 34, bottom: 122, left: 34 })
+  assert.deepEqual(mapCameraPadding(false), { top: 84, right: 60, bottom: 126, left: 60 })
+  assert.deepEqual(mapCameraPadding(true, 104), { top: 84, right: 34, bottom: 226, left: 34 })
+  assert.deepEqual(mapCameraPadding(false, 104), { top: 84, right: 60, bottom: 230, left: 60 })
+  assert.deepEqual(mapCameraPadding(true, 0, 62.4), { top: 83, right: 34, bottom: 122, left: 34 })
 })

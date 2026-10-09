@@ -5,14 +5,14 @@ import assert from 'node:assert/strict'
 import {JSDOM} from 'jsdom'
 import {createServer} from 'vite'
 import React,{act} from 'react'
-let server,dom,root,createRoot,I18nProvider,Editor,PlaceSheet,ProfileIdentity,AddPlaces,PublicGuide,Home,Login,PageError,App,AuthProvider,GuestResponsePage,patchPlace,mapControls
+let server,dom,root,createRoot,I18nProvider,Editor,PlaceSheet,ProfileIdentity,AddPlaces,PublicGuide,LegalFooter,Home,Login,PageError,App,AuthProvider,GuestResponsePage,patchPlace,mapControls
 const guide={id:'test',ownerId:'owner',city:'Warsaw',country:'Poland',slug:'warsaw',authorName:'Ada',title:'Warsaw',intro:'',guideNote:'',center:{lat:52,lng:21},categories:[{id:'eat',label:'Eat',icon:'x',sortOrder:0}],places:[{id:'one',name:'Venue',address:'Street',lat:52,lng:21,categoryId:'eat',note:'Long note '.repeat(500)}],visibility:'unlisted',isPublished:true,updatedAt:new Date().toISOString()}
 const noOp=()=>{}
 const editorProps={guide,onNavigate:noOp,onUpdatePlace:noOp,onUpdateGuideNote:noOp,onRemovePlace:noOp,onMovePlace:noOp,onReorderPlace:noOp,backPath:'/creator',previewPath:'/preview/test',publicPath:'/ada/warsaw',addPath:'/edit/test/add'}
 const render=async element=>{await act(async()=>root.render(React.createElement(I18nProvider,null,element)))}
 const click=async element=>{await act(async()=>{element.click()})}
 before(async()=>{
- dom=new JSDOM('<button id="opener">Open</button><div id="root"><div id="app"></div></div>',{url:'http://localhost/'})
+ dom=new JSDOM('<button id="opener">Open</button><div id="root"><div id="app"></div></div>',{url:'http://localhost/',pretendToBeVisual:true})
  for(const key of ['window','document','HTMLElement','HTMLDialogElement','Element','Event','KeyboardEvent','MutationObserver','localStorage'])globalThis[key]=dom.window[key]
  Object.defineProperty(globalThis,'navigator',{configurable:true,value:dom.window.navigator});globalThis.IS_REACT_ACT_ENVIRONMENT=true
  window.scrollTo=()=>{}
@@ -30,8 +30,9 @@ before(async()=>{
  ;({controls:mapControls}=await server.ssrLoadModule('/tests/helpers/maplibre.mjs'))
  ;({Home}=await server.ssrLoadModule('/src/components/Home.tsx'));({Login}=await server.ssrLoadModule('/src/components/Login.tsx'));({PageError}=await server.ssrLoadModule('/src/components/PageError.tsx'));({default:App}=await server.ssrLoadModule('/src/App.tsx'));({AuthProvider}=await server.ssrLoadModule('/src/hooks/useAuth.tsx'));;({I18nProvider}=await server.ssrLoadModule('/src/i18n.tsx'));({Editor}=await server.ssrLoadModule('/src/components/Editor.tsx'));({PlaceSheet}=await server.ssrLoadModule('/src/components/PlaceSheet.tsx'));({ProfileIdentity}=await server.ssrLoadModule('/src/components/ProfileIdentity.tsx'));({AddPlaces}=await server.ssrLoadModule('/src/components/AddPlaces.tsx'));({PublicGuide}=await server.ssrLoadModule('/src/components/PublicGuide.tsx'))
  ;({GuestResponsePage}=await server.ssrLoadModule('/src/components/GuestResponsePage.tsx'));({patchPlace}=await server.ssrLoadModule('/src/utils/guideEditing.ts'))
+ ;({LegalFooter}=await server.ssrLoadModule('/src/components/LegalFooter.tsx'))
 })
-afterEach(async()=>{await act(async()=>root.render(null));localStorage.clear();mapControls.fail=false})
+afterEach(async()=>{await act(async()=>root.render(null));localStorage.clear();mapControls.fail=false;mapControls.stall=false})
 after(async()=>{await act(async()=>root.unmount());await server.close();dom.window.close()})
 test('Editor waits for all saves before Preview and keeps the task open after failure',async()=>{
  let navigate=[],resolve;let pending=new Promise(r=>resolve=r)
@@ -181,22 +182,48 @@ test('reader preview reuses its map and preserves categories, expanded note, foc
  assert.ok(map.calls.some(([kind])=>kind==='fit'))
  assert.ok(map.calls.filter(([kind])=>kind==='fit').every(([,options])=>options.padding===undefined))
  assert.ok([...document.querySelectorAll('.map-pin')].every(button=>button.disabled&&button.tabIndex===-1))
- await click(document.querySelector('.guide-note-card summary'))
+ const noteToggle=document.querySelector('.guide-note-toggle'),noteBody=document.querySelector('.guide-note-excerpt')
+ assert.equal(noteToggle.getAttribute('aria-expanded'),'false');assert.equal(noteToggle.getAttribute('aria-controls'),noteBody.id)
+ await click(noteBody);assert.equal(noteToggle.getAttribute('aria-expanded'),'false')
+ await click(noteToggle);assert.equal(noteToggle.getAttribute('aria-expanded'),'true')
+ assert.equal(document.querySelectorAll('.guide-note-card p').length,1);assert.equal(noteBody.textContent,current.guideNote)
+ const pins = [...document.querySelectorAll('.map-pin')], fits = map.calls.filter(([kind])=>kind==='fit').length
  await click(document.querySelectorAll('.guide-filters .chip')[2]);assert.equal(document.querySelectorAll('.place-row').length,1)
+ assert.deepEqual([...document.querySelectorAll('.map-pin')], pins)
+ assert.equal(map.calls.filter(([kind])=>kind==='fit').length, fits)
+ assert.equal(document.querySelector('.public-shell').getAttribute('aria-busy'),'false')
  const opener=document.querySelector('.map-preview-open');opener.focus()
  const scrolls=[];window.scrollTo=options=>scrolls.push(options.top);Object.defineProperty(window,'scrollY',{configurable:true,value:345})
  await click(opener)
  assert.equal(mapControls.instances.length,count);assert.equal(map.dragPan.active,true)
  assert.equal(document.querySelector('.map-toolbar .chip.active').textContent,'Coffee')
  assert.ok(document.querySelector('.map-back'));assert.equal(document.querySelector('.guide-list').hidden,true)
+ assert.equal(document.querySelector('.map-back').textContent,'');assert.equal(document.querySelector('.map-back').getAttribute('aria-label'),'Back to guide');assert.equal(document.querySelector('.map-toolbar-title'),null)
+ assert.equal(document.querySelector('.map-back').parentElement,document.querySelector('.map-toolbar'))
+ assert.equal(document.querySelector('.map-back').nextElementSibling.classList.contains('guide-chip-row'),true)
  await click(document.querySelector('.map-pin'))
  await act(async()=>document.querySelector('dialog').dispatchEvent(new window.Event('cancel',{cancelable:true})))
  assert.ok(document.querySelector('.map-back'))
  await act(async()=>window.dispatchEvent(new window.KeyboardEvent('keydown',{key:'Escape'})))
  assert.equal(document.querySelector('.map-back'),null);assert.equal(mapControls.instances.length,count);assert.equal(map.dragPan.active,false)
- assert.equal(document.querySelector('.guide-note-card').open,true);assert.equal(document.querySelector('.guide-filters .chip.active').textContent,'Coffee')
+ assert.equal(document.querySelector('.guide-note-toggle').getAttribute('aria-expanded'),'true');assert.equal(document.querySelector('.guide-filters .chip.active').textContent,'Coffee')
  assert.equal(document.activeElement,document.querySelector('.map-preview-open'));assert.equal(scrolls.at(-1),345)
+ await render(React.createElement(PublicGuide,readerProps({...current,id:'another-guide-in-the-same-city'})));await waitForMap()
+ assert.equal(map.removed,true);assert.equal(mapControls.instances.length,count+1)
+ assert.equal(document.querySelector('.public-shell').getAttribute('aria-busy'),'false')
+ assert.equal(document.querySelector('.guide-note-toggle').getAttribute('aria-expanded'),'false')
  window.scrollTo=noOp
+})
+test('the footer reserves action clearance only while visible and releases it on hiding or unmount',async()=>{
+ await render(React.createElement(LegalFooter,{onNavigate:noOp}))
+ const footer=document.querySelector('.legal-footer'),appRoot=document.getElementById('root')
+ const update=async rect=>{footer.getBoundingClientRect=()=>rect;await act(async()=>{window.dispatchEvent(new window.Event('scroll'));await new Promise(resolve=>setTimeout(resolve,30))})}
+ await update({top:window.innerHeight-60,bottom:window.innerHeight-24,height:36})
+ assert.equal(appRoot.style.getPropertyValue('--footer-control-bottom'),'72px')
+ await update({top:window.innerHeight+20,bottom:window.innerHeight+56,height:36})
+ assert.equal(appRoot.style.getPropertyValue('--footer-control-bottom'),'0px')
+ await update({top:0,bottom:0,height:0});assert.equal(appRoot.style.getPropertyValue('--footer-control-bottom'),'0px')
+ await act(async()=>root.render(null));assert.equal(appRoot.style.getPropertyValue('--footer-control-bottom'),'')
 })
 test('the reader map shortcut appears only after the preview leaves above the viewport',async()=>{
  await render(React.createElement(PublicGuide,readerProps(guide)));await waitForMap()
@@ -217,5 +244,37 @@ test('unsupported WebGL leaves the guide readable and the map closable in EN and
   assert.ok(document.querySelector('.map-error'));assert.ok(document.querySelector('.place-row'))
   assert.equal(document.querySelector('.map-preview-cue').textContent.trim(),locale==='en'?'Explore map':'Zobacz na mapie')
   await click(document.querySelector('.map-preview-open'));await click(document.querySelector('.map-back'));assert.equal(document.querySelector('.guide-list').hidden,false)
+ }
+})
+
+test('initial map wait is bounded, exposes a readable fallback and does not recur on filtering', async()=>{
+ mapControls.stall=true
+ const current={...guide,id:'slow-map'}
+ await render(React.createElement(PublicGuide,readerProps(current)));await waitForMap()
+ assert.equal(document.querySelector('.public-shell').getAttribute('aria-busy'),'true')
+ assert.ok(document.querySelector('.guide-content').hasAttribute('inert'))
+ await act(async()=>{await new Promise(resolve=>setTimeout(resolve,2600))})
+ assert.equal(document.querySelector('.public-shell').getAttribute('aria-busy'),'false')
+ assert.equal(document.querySelector('.guide-content').hasAttribute('inert'),false)
+ assert.ok(document.querySelector('.map-error'));assert.ok(document.querySelector('.place-row'))
+ await click(document.querySelectorAll('.guide-filters .chip')[1])
+ assert.equal(document.querySelector('.initial-screen-loading'),null)
+ await render(React.createElement(PublicGuide,readerProps({...guide,id:'empty-no-wait',places:[]})))
+ assert.equal(document.querySelector('.public-shell').getAttribute('aria-busy'),'false')
+})
+
+test('first-place content reveals after image load or failure and does not hide again during selection',async()=>{
+ for(const event of ['load','error']) {
+  await act(async()=>root.render(null))
+  await render(React.createElement(Editor,{...editorProps,guide:{...guide,id:'image-'+event,places:[]}}))
+  assert.equal(document.querySelector('.first-place-screen').getAttribute('aria-busy'),'true')
+  const image=document.querySelector('.first-place-illustration')
+  await act(async()=>image.dispatchEvent(new window.Event(event)))
+  assert.equal(document.querySelector('.first-place-screen').getAttribute('aria-busy'),'false')
+  assert.equal(document.querySelector('.first-place-body').hasAttribute('inert'),false)
+  assert.equal(document.querySelector('.initial-screen-loading'),null)
+  if(event==='error')assert.equal(document.querySelector('.first-place-illustration'),null)
+  else assert.ok(document.querySelector('.first-place-illustration'))
+  assert.equal(document.querySelector('.import-entry p'),null)
  }
 })

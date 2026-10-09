@@ -1,7 +1,7 @@
 {
   "name": "anyones-guide",
   "private": true,
-  "version": "0.8.9",
+  "version": "0.8.13",
   "type": "module",
   "scripts": {
     "prepare:maplibre": "node scripts/prepare-maplibre-worker.mjs",

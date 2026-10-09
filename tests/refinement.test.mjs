@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises'
 async function load(file) { const source = (await readFile(new URL(file,import.meta.url),'utf8')).replace('../../shared/city-names.mjs',new URL('../shared/city-names.mjs',import.meta.url).href); return import('data:text/javascript,'+encodeURIComponent(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText)) }
 const { GuideSaveQueue, getGuideSaveQueue, flushActiveGuideSaves } = await load('../src/services/guideSaves.ts')
 const { reorderPlaces, patchPlace } = await load('../src/utils/guideEditing.ts')
-const { compactPlaceLocation } = await load('../src/utils/placeLocation.ts')
+const { compactPlaceLocation, placeStreet } = await load('../src/utils/placeLocation.ts')
 const { mapsUrl } = await load('../src/utils/maps.ts')
 const { formatDistance } = await load('../src/utils/distance.ts')
 const { safeDecode, normalizePath } = await load('../src/utils/routes.ts')
@@ -76,5 +76,50 @@ test('place rows shorten reliable city suffixes without guessing international a
   assert.equal(compactPlaceLocation(place, city, country), expected)
   assert.equal(place.address, subtitle)
  }
+ const streets = [
+  ['Koszykowa 1, 00-564 Warsaw, Poland','Koszykowa 1'],
+  ['Regina, Koszykowa 1, Śródmieście, 00-564 Warsaw, Poland','Koszykowa 1'],
+  ['1 Main Street, Cambridge, MA 02138, United States','1 Main Street'],
+  ['222 Rue Saint-Denis, 75002 Paris, France','222 Rue Saint-Denis'],
+  ['High Street, Oxford, United Kingdom','High Street'],
+  ['Pierogi · Śródmieście',''],['Warsaw',''],['00-564 Warsaw, Poland',''],
+  ['東京都新宿区西新宿2丁目',''],['Cambridge MA 02138',''],
+ ]
+ for(const [address,expected] of streets) assert.equal(placeStreet({name:'Regina',address},'Warsaw','Poland'),expected)
  assert.equal(compactPlaceLocation({name:'Regina',subtitle:'00-564 Warsaw, Poland',address:'Regina, Koszykowa 1, 00-564 Warsaw, Poland'},'Warsaw','Poland'),'Koszykowa 1')
+ const gdanskFormats=[
+  ['Szeroka 16, 80-835 Gdansk, Polska','Szeroka 16'],
+  ['3 Maja 7 A, Gdansk, Poland','3 Maja 7 A'],
+  ['10 Lutego 12/14/16, Śródmieście, Gdańsk, Polska','10 Lutego 12/14/16'],
+  ['Dywizjonu 303 3, Gdańsk, Polska','Dywizjonu 303 3'],
+  ['Świętojańska 12–14, 80-840 Gdańsk, Poland','Świętojańska 12–14'],
+  ['Długa 5 lok. 2, 80-827 Gdansk, Poland','Długa 5'],
+  ['REGINA, Chmielna 10, Gdansk, Polska','Chmielna 10'],
+  ['Provider venue name, Tkacka 7/8, Gdansk, Polska','Tkacka 7/8'],
+  ['Lisia Grobla 7, Gdańsk, Pomorskie, Poland','Lisia Grobla 7'],
+  ['ul. Długa, Gdańsk, Polska','ul. Długa'],
+  ['Gdańsk 80-831, Polska',''],['80-831 Gdansk, Poland',''],['District 5, Gdansk',''],
+ ]
+ for(const [address,expected] of gdanskFormats){
+  const place={name:'Regina',address}
+  assert.equal(placeStreet(place,'Gdańsk','Poland'),expected,address);assert.equal(place.address,address)
+ }
+ assert.equal(placeStreet({name:'Cafe',address:'80-001 Gdansk, Poland',subtitle:'3 Maja 7 A'},'Gdańsk','Poland'),'3 Maja 7 A')
+ // Exact saved values supplied in the user's place-detail screenshots.
+ const savedAddresses=[
+  ['Masło Maślane','Masło Maślane, Garncarska, 80-894 Gdansk, Poland','Garncarska'],
+  ['100cznia','100cznia, Księdza Jerzego Popiełuszki 5, 80-863 Gdańsk, Poland','Księdza Jerzego Popiełuszki 5'],
+  ['Muzeum II Wojny Światowej 02','Muzeum II Wojny Światowej 02, Wałowa, 80-882 Gdańsk, Poland','Wałowa'],
+  ['Cafe','Garncarska, 80-894 Gdansk, Poland','Garncarska'],
+  ['Cafe','Cafe, Garncarska, Śródmieście, 80-894 Gdańsk, Poland','Garncarska'],
+  ['Cafe','Provider name, Wałowa, 80-882 Gdańsk, Poland','Wałowa'],
+  ['Cafe','Cafe, Śródmieście, 80-894 Gdańsk, Poland',''],
+  ['Cafe','Cafe, Old Town, 80-894 Gdańsk, Poland',''],
+  ['Cafe','Cafe, Gdansk, 80-894 Gdańsk, Poland',''],
+  ['Cafe','Garncarska',''],
+  ['Cafe','Cafe, Garncarska, 80-894 Warsaw, Poland',''],
+ ]
+ for(const [name,address,expected] of savedAddresses){
+  const place={name,address};assert.equal(placeStreet(place,'Gdańsk','Poland'),expected,address);assert.equal(place.address,address)
+ }
 })

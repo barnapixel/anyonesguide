@@ -9,6 +9,8 @@ import type { Guide, Place, PlaceSearchResult } from '../types'
 import { RecommendationImport } from './RecommendationImport'
 import { loadImportDraft } from '../services/recommendationImport'
 import { FirstPlaceIllustration } from './FirstPlaceIllustration'
+import { useInitialReveal } from '../hooks/useInitialReveal'
+import { InitialScreenLoading } from './InitialScreenLoading'
 
 type Props = {
   guide: Guide
@@ -32,6 +34,7 @@ export function FirstPlace({ guide, scope, context, localOnly = false, storageUn
   durableRef.current = durable
   const [saving, setSaving] = useState(false)
   const [importOpen, setImportOpen] = useState(() => Boolean(loadImportDraft(scope)?.rows.length))
+  const { revealed, waitExpired, release } = useInitialReveal(scope, !draft.selected && !importOpen)
   const [importBusy, setImportBusy] = useState(false)
   const importBusyRef = useRef(false)
   const savingRef = useRef(false)
@@ -91,14 +94,15 @@ export function FirstPlace({ guide, scope, context, localOnly = false, storageUn
     } finally { savingRef.current = false; setSaving(false) }
   }
 
-  return <main ref={screenRef} className="editor-shell first-place-screen">
+  return <main ref={screenRef} className="editor-shell first-place-screen" aria-busy={!revealed}>
     <header className="editor-topbar first-place-topbar">
       <button type="button" className="icon-button" onClick={() => void back()} disabled={saving || importBusy} aria-label={t('common.back')}><ArrowLeft size={20} /></button>
       <div className="editor-title"><strong>{guide.city}</strong>{context && <span className="first-place-context">{context}</span>}</div>
     </header>
-    <section className="first-place-body">
+    {!revealed && <InitialScreenLoading />}
+    <section className={`first-place-body ${!revealed ? 'visual-pending' : ''}`} inert={!revealed} aria-hidden={!revealed}>
       {!importOpen && <h1>{t('first.question')}</h1>}
-      {!draft.selected && !importOpen && <><FirstPlaceIllustration choice={illustrationChoice} /><p className="first-place-reassurance">{t('first.reassurance')}</p></>}
+      {!draft.selected && !importOpen && <><FirstPlaceIllustration choice={illustrationChoice} onReady={release} omit={waitExpired} /><p className="first-place-reassurance">{t('first.reassurance')}</p></>}
       {!draft.selected ? <>
         {!importOpen && <>
         <div className="search-box">

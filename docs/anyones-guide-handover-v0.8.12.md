@@ -1,0 +1,21 @@
+# Anyone’s Guide handover, 9 October 2026, v0.8.12
+
+Current cumulative source is v0.8.12, based on v0.8.11. User wants only the delta patch pack. Apply it to v0.8.11 with `UPDATE-v0.8.12.txt`. Package and lockfile agree; dependencies, ten migrations, server/hosting configuration and provider setup are unchanged. No deployment occurred. See [upgrade](../UPGRADE-v0.8.12-compact-map-and-note.md) and [verification](verification.md).
+
+## Latest decisions and experience
+
+Full map retains an explicit arrow-only 44px Back button. Swipe-only dismissal was rejected because it is undiscoverable and conflicts with map panning. Categories sit beside Back in one horizontal strip; only categories scroll on narrow screens, preserving comfortable tap targets. An inherited active category and keyboard-focused category are scrolled into view within the strip. There is no guide-title panel or footer in full map. Camera top clearance uses the measured compact toolbar. Warning text moves below it, but the existing map error listener is unchanged.
+
+The personal note now previews one line rather than two. The author/chevron header remains stationary, and one exact paragraph expands/collapses over 200ms through a measured height. Clamping returns after collapse. Reduced-motion preferences disable transitions. Text is selectable and only the header toggles. Responsive height measurement ignores the hidden introduction during full-map mode, preserving state on return. Short notes, interrupted transitions and rapid toggle state settle safely.
+
+The missing Gdańsk street lines were diagnosed from actual place-detail screenshots. Masło Maślane was saved as Masło Maślane, Garncarska, 80-894 Gdansk, Poland. The museum was saved as Muzeum II Wojny Światowej 02, Wałowa, 80-882 Gdańsk, Poland. The prior parser rejected plain Polish street names with no house number or street prefix. The updated parser accepts them with recognised surrounding postcode/city context. 100cznia retains Księdza Jerzego Popiełuszki 5. No number is invented and no saved data or author words are changed. There is no new API request or backfill. Unsupported/ambiguous international or district-only records can still be omitted; do not claim universal geocoding.
+
+All-place preview remains unchanged on list filters; full map inherits and supports filtering. Same map, pin selection, exact author notes and return category/note/position/focus remain. Footer stays centred in normal page flow; Map/Add move above it while visible. Attribution is transparent and clickable. Existing badge/safe-area clearance remains. Initial loading is bounded at 2500ms, errors release usable content and filtering/navigation do not restart it. Three approved English graphics remain in both languages. Screenshot link remains You can also start with a screenshot / Możesz też zacząć od zrzutu ekranu. Explicit save/review/recovery flows are unchanged.
+
+## Working style and remaining work
+
+The proposition is a friend's favourite places and exact words. Keep optional inputs and clean editorial design. Google migration and venue photos remain paused. Avoid generic generated recommendations, ratings, mandatory onboarding and three-place targets. The subtle note transition is explicitly approved; do not infer authorisation for wider animation. Preserve latest EN/PL copy and exact author text. Avoid em dashes in new system copy. Reuse tests and run affected checks for small scoped changes, distinguishing them from a full-suite run and live/mobile acceptance. Deliver concrete one-line update instructions. Do not deploy or change accounts without authorisation.
+
+Existing server-only GEMINI_API_KEY and RECOMMENDATION_IMPORT_ENABLED=true are still needed for screenshot extraction. No new variable or manually created Netlify function is required. Gemini is not assumed live or verified.
+
+See verification.md for this release's results. Real phone/touch/browser chrome/safe areas/keyboards, live provider data/tiles and actual badge, Gemini/deployed functions/rate limits and live auth/sharing/recovery remain outstanding. The earlier screenshot's map warning while some basemap tiles are visible is still a separate live diagnostic item. No account mutation, paid API or deployment occurred.

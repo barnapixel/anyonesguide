@@ -18,6 +18,8 @@ type Props = {
   userLocation: Coordinates | null
   locationStatus: 'idle' | 'loading' | 'ready' | 'denied' | 'error'
   onRequestLocation: () => void
+  onInitialReady?: () => void
+  initialWaitExpired?: boolean
 }
 
 // Keep MapLibre's worker outside Vite's optimized-dependency cache.
@@ -66,7 +68,18 @@ function geoapifyRasterStyle(apiKey: string): StyleSpecification {
 function cameraPadding(): PaddingOptions {
   const mobile = window.matchMedia('(max-width: 520px)').matches
   const clearance = Number.parseFloat(window.getComputedStyle(document.body).getPropertyValue('--netlify-badge-clearance')) || 0
-  return mapCameraPadding(mobile, clearance)
+  const toolbarBottom = document.querySelector('.public-shell.map-screen .map-toolbar')?.getBoundingClientRect().bottom
+  return mapCameraPadding(mobile, clearance, toolbarBottom)
+}
+
+function previewCameraPadding(map: Map): PaddingOptions {
+  // Credits and the Explore cue share the bottom edge. Leave room for the
+  // actual wrapped credit height, including marker radius, on narrow screens.
+  const wrap = map.getCanvas().closest<HTMLElement>('.map-wrap')
+  const cue = wrap?.parentElement?.querySelector('.map-preview-cue')?.getBoundingClientRect()
+  if (cue?.width) wrap?.style.setProperty('--preview-cue-width', `${cue.width}px`)
+  const credits = wrap?.querySelector('.maplibregl-ctrl-attrib')?.getBoundingClientRect()
+  return { top: 20, right: 20, bottom: Math.max(56, Math.max(credits?.height ?? 0, cue?.height ?? 0) + 24), left: 20 }
 }
 
 function fitPlaces(map: Map, guide: Guide, places: Place[], animate: boolean, padding = cameraPadding()) {
@@ -126,11 +139,14 @@ function viewportMeaningfullyContains(map: Map, places: Place[]) {
   return visible / places.length >= 0.7
 }
 
-export function GuideMap({ variant = 'full', guide, places, selectedPlace, onSelectPlace, userLocation, locationStatus, onRequestLocation }: Props) {
+export function GuideMap({ variant = 'full', guide, places, selectedPlace, onSelectPlace, userLocation, locationStatus, onRequestLocation, onInitialReady, initialWaitExpired = false }: Props) {
   const { t } = useI18n()
   const variantRef = useRef(variant)
   variantRef.current = variant
-  const previewPadding = { top: 24, right: 24, bottom: 40, left: 24 }
+  const onInitialReadyRef = useRef(onInitialReady)
+  onInitialReadyRef.current = onInitialReady
+  const initialFramedRef = useRef(false)
+  const notifiedRef = useRef(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Map | null>(null)
   const placesRef = useRef(places)
@@ -142,12 +158,16 @@ export function GuideMap({ variant = 'full', guide, places, selectedPlace, onSel
   const previousPlaceKeyRef = useRef('')
   const [mapReady, setMapReady] = useState(false)
   const [mapError, setMapError] = useState(false)
+  const [initialFrameReady, setInitialFrameReady] = useState(false)
   const style = useMemo(() => appConfig.geoapifyApiKey ? geoapifyRasterStyle(appConfig.geoapifyApiKey) : osmFallbackStyle, [])
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
     setMapError(false)
     setMapReady(false)
+    setInitialFrameReady(false)
+    initialFramedRef.current = false
+    notifiedRef.current = false
     didInitialFrameRef.current = false
     didAutoFrameLocationRef.current = false
     previousPlaceKeyRef.current = ''
@@ -160,10 +180,16 @@ export function GuideMap({ variant = 'full', guide, places, selectedPlace, onSel
       zoom: 12.8,
       attributionControl: false,
       interactive: variantRef.current === 'full',
-    }) } catch { setMapError(true); return }
+    }) } catch { setMapError(true); onInitialReadyRef.current?.(); return }
     map.getCanvas().tabIndex = variantRef.current === 'preview' ? -1 : 0
     map.addControl(new AttributionControl({ compact: false }), 'bottom-left')
-    map.on('error', () => setMapError(true))
+    map.on('error', () => { setMapError(true); onInitialReadyRef.current?.() })
+    map.on('idle', () => {
+      if (!initialFramedRef.current || notifiedRef.current) return
+      notifiedRef.current = true
+      setInitialFrameReady(true)
+      onInitialReadyRef.current?.()
+    })
     map.on('load', () => {
       setMapError(false)
       map.resize()
@@ -174,7 +200,7 @@ export function GuideMap({ variant = 'full', guide, places, selectedPlace, onSel
     // current camera and adjust its padding, without another fit or zoom.
     let lastPadding = ''
     const updatePadding = () => {
-      const padding = variantRef.current === 'preview' ? { top: 24, right: 24, bottom: 40, left: 24 } : cameraPadding(), next = JSON.stringify(padding)
+      const padding = variantRef.current === 'preview' ? previewCameraPadding(map) : cameraPadding(), next = JSON.stringify(padding)
       if (lastPadding !== next) { lastPadding = next; map.setPadding(padding) }
     }
     const badgeObserver = new MutationObserver(updatePadding)
@@ -183,7 +209,7 @@ export function GuideMap({ variant = 'full', guide, places, selectedPlace, onSel
     const sizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
       map.resize()
       updatePadding()
-      if (variantRef.current === 'preview') fitPlaces(map, guide, placesRef.current, false, { top: 24, right: 24, bottom: 40, left: 24 })
+      if (variantRef.current === 'preview') fitPlaces(map, guide, placesRef.current, false, previewCameraPadding(map))
     }) : null
     sizeObserver?.observe(containerRef.current)
     const resizeTimer = window.setTimeout(() => map.resize(), 50)
@@ -196,7 +222,7 @@ export function GuideMap({ variant = 'full', guide, places, selectedPlace, onSel
       mapRef.current = null
       setMapReady(false)
     }
-  }, [guide.center.lat, guide.center.lng, style])
+  }, [guide.id, guide.center.lat, guide.center.lng, style])
 
   useLayoutEffect(() => {
     const map = mapRef.current
@@ -208,10 +234,17 @@ export function GuideMap({ variant = 'full', guide, places, selectedPlace, onSel
     }
     map.getCanvas().tabIndex = variant === 'preview' ? -1 : 0
     map.resize()
-    map.setPadding(variant === 'preview' ? { top: 24, right: 24, bottom: 40, left: 24 } : cameraPadding())
+    map.setPadding(variant === 'preview' ? previewCameraPadding(map) : cameraPadding())
     didInitialFrameRef.current = false
     didAutoFrameLocationRef.current = false
   }, [variant])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !mapReady || variant !== 'preview') return
+    fitPlaces(map, guide, places, false, previewCameraPadding(map))
+    initialFramedRef.current = true
+  }, [mapReady, places, guide.center.lat, guide.center.lng, variant, t])
 
   useEffect(() => {
     const map = mapRef.current
@@ -241,10 +274,8 @@ export function GuideMap({ variant = 'full', guide, places, selectedPlace, onSel
     const map = mapRef.current
     if (!map || !mapReady) return
 
-    if (variant === 'preview') {
-      fitPlaces(map, guide, places, false, previewPadding)
-      return
-    }
+    if (variant === 'preview') return
+    initialFramedRef.current = true
 
     const placeKey = places.map(place => place.id).sort().join('|')
 
@@ -285,12 +316,12 @@ export function GuideMap({ variant = 'full', guide, places, selectedPlace, onSel
 
   return (
     <div className={`map-wrap ${variant === 'preview' ? 'map-preview' : ''}`}>
-      {!mapReady && !mapError && <div className="map-loading-indicator" role="status" aria-label={t('common.loading')}><div className="loading-dot" /></div>}
+      {!mapReady && !mapError && !initialWaitExpired && <div className="map-loading-indicator" role="status" aria-label={t('common.loading')}><div className="loading-dot" /></div>}
       <div ref={containerRef} className="map-canvas" />
       {variant === 'full' && <button className={`locate-button ${locationStatus === 'loading' ? 'loading' : ''}`} onClick={locate} disabled={locationStatus === 'loading'} aria-label={t('map.locate')}>
         <LocateFixed size={20} />
       </button>}
-      {mapError && <div className="map-message map-error">{t('guide.mapError')}</div>}
+      {(mapError || (initialWaitExpired && !initialFrameReady)) && <div className="map-message map-error">{t('guide.mapError')}</div>}
       {variant === 'full' && !mapError && (locationStatus === 'denied' || locationStatus === 'error') && (
         <div className="map-message">{t('guide.locationUnavailable')}</div>
       )}
