@@ -1,0 +1,5 @@
+Run from your existing v0.8.13 project root after downloading the patch to Downloads.
+
+& { $ErrorActionPreference='Stop'; if (!(Test-Path .\package.json)) { throw 'Run this from your existing project folder.' }; $agVersion=(Get-Content .\package.json -Raw | ConvertFrom-Json).version; if ($agVersion -notin @('0.8.13','0.8.14')) { throw 'This patch requires v0.8.13.' }; $agTmp=Join-Path $env:TEMP ([guid]::NewGuid().ToString()); try { Expand-Archive -LiteralPath "$env:USERPROFILE\Downloads\anyones-guide-v0.8.14-patch.zip" -DestinationPath $agTmp; Copy-Item -Path "$agTmp\anyones-guide-v0.8.14-patch\*" -Destination . -Recurse -Force } finally { if (Test-Path -LiteralPath $agTmp) { Remove-Item -LiteralPath $agTmp -Recurse -Force } } }
+
+Apply supabase/migrations/0011_invitation_destinations.sql BEFORE deploying. No environment or dependency change.

@@ -1624,3 +1624,8 @@ iframe#nl-badge-frame {
   .place-sheet { width: min(600px, 100%); margin: 0 auto; border-radius: 22px; max-height: calc(100dvh - 64px); padding: 30px; }
   .sheet-handle { display: none; }
 }
+
+/* Confirmed request destination. */
+.request-selected-destination { overflow-wrap: anywhere; }
+.request-selected-destination .text-button { margin-left: 12px; }
+.import-entry[hidden] { display: none; }

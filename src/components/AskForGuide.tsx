@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ArrowLeft, Share2 } from 'lucide-react'
+import type { DestinationSearchResult } from '../types'
+import { DestinationPicker } from './DestinationPicker'
 import { BrandLockup } from './BrandLockup'
 import { LanguageToggle } from './LanguageToggle'
 import { useAuth } from '../hooks/useAuth'
@@ -17,6 +19,7 @@ export function AskForGuide({ onNavigate }: { onNavigate: (path: string) => void
   const { t, locale } = useI18n()
   const [name, setName] = useState('')
   const [city, setCity] = useState('')
+  const [destination, setDestination] = useState<DestinationSearchResult | null>(null)
   const [resolvedUser, setResolvedUser] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
@@ -35,12 +38,12 @@ export function AskForGuide({ onNavigate }: { onNavigate: (path: string) => void
     }).catch(() => { if (active) { setResolvedUser(user.id); setError(t('request.profileUnavailable')) } })
     return () => { active = false; generation.current++ }
   }, [user?.id])
-  const disabled = busy || loading || Boolean(user && resolvedUser !== user.id) || !appConfig.cloudEnabled
+  const disabled = busy || loading || Boolean(user && resolvedUser !== user.id) || !appConfig.cloudEnabled || Boolean(city.trim() && !destination)
   const ensureInvitation = async () => {
-    const signature = JSON.stringify([user?.id ?? null, name.trim(), city.trim(), locale])
+    const signature = JSON.stringify([user?.id ?? null, name.trim(), city.trim(), locale, destination])
     if (pendingRef.current?.signature !== signature) pendingRef.current = { signature, key: crypto.randomUUID() }
     const pending = pendingRef.current!
-    if (!pending.record) pending.record = await createInvitation(pending.key, name, city, locale)
+    if (!pending.record) pending.record = await createInvitation(pending.key, name, city, locale, destination)
     return pending.record
   }
   const run = async (preview: boolean) => {
@@ -67,7 +70,7 @@ export function AskForGuide({ onNavigate }: { onNavigate: (path: string) => void
       <form className="request-card request-form" onSubmit={share}>
         <label htmlFor="request-name">{t(user ? 'request.publicName' : 'request.nameOptional')}</label><input id="request-name" value={name} readOnly={Boolean(user)} disabled={busy} onChange={event => setName(event.target.value)} maxLength={80} autoComplete="given-name" placeholder={t('request.namePlaceholder')} aria-describedby="request-name-help" />
         <p id="request-name-help" className="request-small">{t(user ? 'request.publicNameHelp' : 'request.anonymousHelp')}</p>
-        <label htmlFor="request-city">{t('request.cityOptional')}</label><input id="request-city" value={city} disabled={busy} onChange={event => setCity(event.target.value)} maxLength={120} placeholder={t('request.cityPlaceholder')} />
+        {destination ? <div className="request-selected-destination"><strong>{destination.city}</strong><span> · {destination.country}</span><button type="button" className="text-button" disabled={busy} onClick={() => { setDestination(null); setCity('') }}>{t('first.change')}</button></div> : <DestinationPicker inputId="request-city" label={t('request.cityOptional')} disabled={busy} onQueryChange={setCity} onPick={selected => { setDestination(selected); setCity(selected.city) }} />}
         <p className="request-share-preview">{requestShareContent(name, city, locale).title}</p>
         {!appConfig.cloudEnabled && <p className="request-small">{t('request.invitationUnavailable')}</p>}
         <button className="primary-button" type="submit" disabled={disabled}><Share2 size={17} />{t(busy ? 'request.preparingInvitation' : 'request.shareInvitation')}</button>

@@ -1,6 +1,6 @@
-import type { Locale } from '../types'
+import type { DestinationSearchResult, Locale } from '../types'
 
-export type GuideInvitation = { id?: string; shortCode?: string; name: string; city: string; locale: Locale }
+export type GuideInvitation = { id?: string; shortCode?: string; name: string; city: string; locale: Locale; destination?: DestinationSearchResult | null }
 
 export const invitationIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -12,6 +12,16 @@ export function invitationPath(id: string, shortCode?: string) {
   return `/request/${shortCode ?? id}`
 }
 
+export function isInvitationDestination(value: unknown): value is DestinationSearchResult {
+  if (!value || typeof value !== 'object') return false
+  const d = value as DestinationSearchResult
+  return typeof d.id === 'string' && d.id.length > 0 && d.id.length <= 1000
+    && typeof d.city === 'string' && d.city.trim().length > 0 && d.city.length <= 120
+    && typeof d.country === 'string' && d.country.trim().length > 0 && d.country.length <= 120
+    && (d.sourceCity === undefined || typeof d.sourceCity === 'string' && d.sourceCity.length <= 120)
+    && Number.isFinite(d.lat) && Math.abs(d.lat) <= 90 && Number.isFinite(d.lng) && Math.abs(d.lng) <= 180
+}
+
 export function isStoredInvitation(value: unknown): value is GuideInvitation & { id: string } {
   if (!value || typeof value !== 'object') return false
   const invitation = value as GuideInvitation
@@ -20,6 +30,7 @@ export function isStoredInvitation(value: unknown): value is GuideInvitation & {
     && typeof invitation.name === 'string' && invitation.name.length <= 80
     && typeof invitation.city === 'string' && invitation.city.length <= 120
     && (invitation.locale === 'en' || invitation.locale === 'pl')
+    && (invitation.destination == null || isInvitationDestination(invitation.destination) && invitation.destination.city === invitation.city)
 }
 
 export function readInvitation(search: string): GuideInvitation {

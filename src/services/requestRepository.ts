@@ -1,14 +1,18 @@
+import type { DestinationSearchResult } from '../types'
 import { requireSupabase } from '../lib/supabase'
 import { guestSnapshotBytes, isGuestDraft, withGuestCityName, type GuestDraft } from './guestDrafts'
-import { invitationCodePattern, invitationIdPattern, isStoredInvitation, type GuideInvitation } from '../utils/requestLinks'
+import { invitationCodePattern, invitationIdPattern, isStoredInvitation, isInvitationDestination, type GuideInvitation } from '../utils/requestLinks'
 
-export async function createInvitation(creationKey: string, name: string, city: string, locale: 'en' | 'pl'): Promise<GuideInvitation & { id: string }> {
+export async function createInvitation(creationKey: string, name: string, city: string, locale: 'en' | 'pl', destination: DestinationSearchResult | null = null): Promise<GuideInvitation & { id: string }> {
   if (!invitationIdPattern.test(creationKey)) throw new Error('Invalid creation key.')
-  const { data, error } = await requireSupabase().rpc('create_guide_invitation', {
+  if (destination && (!isInvitationDestination(destination) || destination.city !== city.trim())) throw new Error('Invalid destination.')
+  const { data, error } = await requireSupabase().rpc(destination ? 'create_guide_invitation_with_destination' : 'create_guide_invitation', {
     p_creation_key: creationKey, p_name: name.trim(), p_city: city.trim(), p_locale: locale,
+    ...(destination ? { p_destination: destination } : {}),
   })
   if (error) throw error
   if (!isStoredInvitation(data)) throw new Error('Invalid invitation response.')
+  if (destination && (!data.destination || ['id', 'city', 'country', 'lat', 'lng', 'sourceCity'].some(key => data.destination?.[key as keyof DestinationSearchResult] !== destination[key as keyof DestinationSearchResult]))) throw new Error('Destination was not preserved.')
   return data
 }
 

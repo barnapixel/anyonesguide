@@ -247,3 +247,19 @@ test('a generated-code collision retries safely without changing the existing in
 })
 
 test('0010 backfills pre-existing invitations and preserves their UUID context and guides',()=>assert.equal(shortUpgradePreserved,true))
+
+
+test('confirmed invitation destinations are validated, immutable on retry and readable through both link formats',async()=>{
+ const key=crypto.randomUUID(),dest={id:'warsaw',city:'Warsaw',country:'Poland',lat:52.23,lng:21.01}
+ const create=(k,d)=>role('anon',null,()=>rpc('create_guide_invitation_with_destination',k,'Boris','Warsaw','en',d))
+ const first=await create(key,dest)
+ assert.deepEqual(first.destination,dest)
+ assert.deepEqual(await create(key,dest),first)
+ assert.deepEqual(await role('anon',null,()=>rpc('read_guide_invitation',first.id)),first)
+ assert.deepEqual(await role('anon',null,()=>rpc('read_guide_invitation_by_code',first.shortCode)),first)
+ await assert.rejects(create(key,{...dest,lat:53}))
+ for(const invalid of [{...dest,lat:91},{...dest,lng:'21'},{...dest,city:'Paris'},{...dest,country:''}]) await assert.rejects(create(crypto.randomUUID(),invalid))
+ await role('authenticated',a,async()=>{
+  await assert.rejects(rpc('create_guide_invitation_with_destination',key,'Boris','Warsaw','en',dest))
+ })
+})

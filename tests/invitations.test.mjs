@@ -28,7 +28,7 @@ before(async()=>{
    if(id==='\0virtual:invite-search')return `export function useSearch(query){return {results:query.length>=2?[${JSON.stringify(destination)}]:[],loading:false,failed:false}};`
    if(id==='\0virtual:invite-guides')return `export async function getMyProfile(){return globalThis.__invite.profile};export async function getGuideById(){return globalThis.__invite.guide};`
    if(id==='\0virtual:invite-repository')return `
-    export async function createInvitation(key,name,city,locale){const f=globalThis.__invite;f.createCalls.push({key,name,city,locale});if(f.createFailure){f.createFailure=false;throw Error('offline')};if(!f.records.has(key))f.records.set(key,{id:crypto.randomUUID(),shortCode:crypto.randomUUID().replaceAll('-','').slice(0,12),name:f.auth.user?f.profile.displayName:name.trim(),city:city.trim(),locale});return f.records.get(key)}
+    export async function createInvitation(key,name,city,locale,destination){const f=globalThis.__invite;f.createCalls.push({key,name,city,locale,destination});if(f.createFailure){f.createFailure=false;throw Error('offline')};if(!f.records.has(key))f.records.set(key,{id:crypto.randomUUID(),shortCode:crypto.randomUUID().replaceAll('-','').slice(0,12),name:f.auth.user?f.profile.displayName:name.trim(),city:city.trim(),locale,destination});return f.records.get(key)}
     export async function readStoredInvitation(id){const f=globalThis.__invite;f.readCalls.push(id);if(f.readFailure)throw Error('offline');return (f.stored?.id===id || f.stored?.shortCode===id)?f.stored:null}
     export async function prepareGuestDraft(draft){globalThis.__invite.prepareCalls.push(draft)}
     export async function claimGuestDraft(id,key){globalThis.__invite.claimCalls.push({id,key});return globalThis.__invite.guide.id}
@@ -53,6 +53,9 @@ test('anonymous sharing retries one creation key, reuses the link after cancella
  await render(React.createElement(AskForGuide,props()))
  assert.equal(document.querySelector('#request-name').required,false)
  await change(document.querySelector('#request-city'),'Warsaw')
+ assert.equal(document.querySelector('button[type="submit"]').disabled,true)
+ await click(document.querySelector('.destination-results button'))
+ assert.deepEqual(f.createCalls,[])
  await click(document.querySelector('button[type="submit"]'))
  assert.ok(document.querySelector('[role="alert"]'));assert.equal(f.shares.length,0)
  await click(document.querySelector('button[type="submit"]'))
@@ -62,9 +65,12 @@ test('anonymous sharing retries one creation key, reuses the link after cancella
  const original=shareLink(f.shares[0])
  navigator.share=async()=>{throw new DOMException('Cancelled','AbortError')}
  await click(document.querySelector('button[type="submit"]'));assert.equal(f.createCalls.length,2)
- await click(document.querySelector('.request-form .text-button'));assert.equal('https://guides.example'+f.routes[0],original)
+ await click([...document.querySelectorAll('.request-form .text-button')].at(-1));assert.equal('https://guides.example'+f.routes[0],original)
  navigator.share=async payload=>globalThis.__invite.shares.push(payload)
+ await click(document.querySelector('.request-selected-destination button'))
  await change(document.querySelector('#request-city'),'Paris')
+ await click(document.querySelector('.destination-results button'))
+ await change(document.querySelector('#request-name'),'Changed')
  await click(document.querySelector('button[type="submit"]'))
  assert.equal(f.createCalls.length,3);assert.notEqual(f.createCalls[2].key,f.createCalls[1].key);assert.notEqual(shareLink(f.shares[1]),original)
 })
@@ -166,6 +172,23 @@ test('short and UUID links resume one draft and a short code never becomes a rec
  assert.equal(draft.invitationId,id);assert.notEqual(draft.key,shortCode)
  await render(React.createElement(RequestInvitation,{...props(),invitationId:id,search:''}))
  assert.ok(document.querySelector('.request-resume'))
+ await click(document.querySelector('.request-resume button'))
+ assert.equal(f.routes.at(-1),'/respond/'+draftId)
+})
+
+
+test('confirmed destinations skip city search and resume the same draft through UUID and short links',async()=>{
+ const f=globalThis.__invite=fixtures(),id=crypto.randomUUID()
+ f.stored={id,shortCode:'7Kp4nB9xQ2mR',name:'Boris',city:'Warsaw',locale:'en',destination}
+ await render(React.createElement(RequestInvitation,{...props(),invitationId:f.stored.shortCode,search:'?city=Paris'}))
+ assert.equal(document.querySelector('.request-destination'),null)
+ await click(document.querySelector('.request-card .primary-button'))
+ const draftId=f.routes[0].split('/').at(-1),draft=loadGuestDraft(draftId)
+ assert.deepEqual(draft.guide.center,{lat:52,lng:21});assert.equal(draft.guide.country,'Poland')
+ assert.equal(draft.invitationId,id)
+ await render(React.createElement(RequestInvitation,{...props(),invitationId:id,search:''}))
+ assert.ok(document.querySelector('.request-resume'))
+ assert.equal(document.querySelector('.request-destination'),null)
  await click(document.querySelector('.request-resume button'))
  assert.equal(f.routes.at(-1),'/respond/'+draftId)
 })

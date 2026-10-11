@@ -120,7 +120,7 @@ export function FirstPlace({ guide, scope, context, localOnly = false, storageUn
         {!loading && !failed && draft.query.trim().length >= 2 && !results.length && <p className="search-status" role="status">{t('add.noMatches')}</p>}
         {error && <p className="status-message error" role="alert">{t(error)}</p>}
         </>}
-        <RecommendationImport guide={guide} scope={scope} first open={importOpen} onOpenChange={setImportOpen} onBusyChange={value => { importBusyRef.current = value; setImportBusy(value) }} onSave={onSave} onDone={place => { if (place) { clearFirstPlaceDraft(scope); onSaved(place) } else setImportOpen(false) }} />
+        <RecommendationImport guide={guide} scope={scope} first hideEntry open={importOpen} onOpenChange={setImportOpen} onBusyChange={value => { importBusyRef.current = value; setImportBusy(value) }} onSave={onSave} onDone={place => { if (place) { clearFirstPlaceDraft(scope); onSaved(place) } else setImportOpen(false) }} />
       </> : <>
         <article className="first-place-selected">
           <div className="first-place-selected-heading">

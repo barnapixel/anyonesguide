@@ -47,3 +47,19 @@ test('creation accepts additive short codes and still works with the prior RPC r
   globalThis.__shortRpc = async () => ({ data: legacy, error: null })
   assert.deepEqual(await createInvitation(key, 'Boris', 'Warsaw', 'pl'), legacy)
 })
+
+
+test('destination creation sends structured context and rejects lost or malformed destination data',async()=>{
+ const destination={id:'warsaw',city:'Warsaw',country:'Poland',lat:52,lng:21}
+ let call
+ globalThis.__shortRpc=async(rpc,args)=>{call={rpc,args};return {data:{...record,destination},error:null}}
+ const created=await createInvitation(id,'Boris','Warsaw','pl',destination)
+ assert.deepEqual(created.destination,destination)
+ assert.equal(call.rpc,'create_guide_invitation_with_destination')
+ assert.deepEqual(call.args.p_destination,destination)
+ globalThis.__shortRpc=async()=>({data:record,error:null})
+ await assert.rejects(createInvitation(id,'Boris','Warsaw','pl',destination),/not preserved/)
+ await assert.rejects(createInvitation(id,'Boris','Warsaw','pl',{...destination,lat:91}),/Invalid destination/)
+ globalThis.__shortRpc=async()=>({data:{...record,destination:{...destination,city:'Paris'}},error:null})
+ await assert.rejects(readStoredInvitation(shortCode),/Invalid invitation response/)
+})

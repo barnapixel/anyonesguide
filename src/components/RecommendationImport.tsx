@@ -10,6 +10,7 @@ type Props = {
   guide: Guide
   scope: string
   first?: boolean
+  hideEntry?: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
   onBusyChange: (busy: boolean) => void
@@ -17,7 +18,7 @@ type Props = {
   onDone: (place?: Place) => void
 }
 
-export function RecommendationImport({ guide, scope, first = false, open, onOpenChange, onBusyChange, onSave, onDone }: Props) {
+export function RecommendationImport({ guide, scope, first = false, hideEntry = false, open, onOpenChange, onBusyChange, onSave, onDone }: Props) {
   const { t } = useI18n()
   const Heading = first ? 'h1' : 'h2'
   const uid = useId()
@@ -149,7 +150,7 @@ export function RecommendationImport({ guide, scope, first = false, open, onOpen
 
   const fileInput = <input ref={fileRef} className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" tabIndex={-1} aria-label={t('import.chooseImage')} disabled={Boolean(busy)} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void acceptFile(file) }} />
 
-  if (!open) return <>{fileInput}<div className="import-entry">
+  if (!open) return <>{fileInput}<div className="import-entry" hidden={hideEntry}>
     <button ref={entryRef} type="button" className="text-button import-entry-link" onClick={() => { onOpenChange(true); if (!draft.rows.length) fileRef.current?.click() }}><Upload size={17} aria-hidden="true" />{t(draft.rows.length ? 'import.resume' : first ? 'import.start' : 'import.add')}</button>
     {!first && <p>{t('import.sources')}</p>}
   </div></>
