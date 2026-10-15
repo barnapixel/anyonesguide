@@ -1,4 +1,4 @@
-import { orderCategoryPlaces, patchPlace, reorderPlaces } from '../utils/guideEditing'
+import { orderCategoryPlaces, patchPlace, reorderPlaces, withAreaCategory } from '../utils/guideEditing'
 import { displayCityName } from '../../shared/city-names.mjs'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { categories, demoGuide } from '../data/demo'
@@ -17,7 +17,7 @@ function loadGuide(): Guide {
       const savedCategories = parsed.categories ?? categories
       const visibleCategories = savedCategories.filter(category => category.id !== 'stay' || places.some(place => place.categoryId === 'stay'))
       const city = displayCityName(parsed.city ?? demoGuide.city, parsed.country ?? demoGuide.country)
-      return { ...demoGuide, ...parsed, city, visibility, categories: visibleCategories, isPublished: visibility !== 'draft', places }
+      return withAreaCategory({ ...demoGuide, ...parsed, city, visibility, categories: visibleCategories, isPublished: visibility !== 'draft', places })
     }
   } catch {
     // Ignore malformed local state and return the bundled demo.
@@ -35,7 +35,13 @@ export function useGuideStore() {
     catch { /* The demo can still be read when storage is disabled. */ }
   }, [guide])
 
-  const updatePlace = useCallback((id: string, patch: Partial<Place>) => setGuide(current => ({ ...patchPlace(current, id, patch), updatedAt: new Date().toISOString() })), [])
+  const updatePlace = useCallback((id: string, patch: Partial<Place>) => {
+    const next = { ...patchPlace(guideRef.current, id, patch), updatedAt: new Date().toISOString() }
+    if (patch.name !== undefined || patch.lat !== undefined || patch.recommendationKind !== undefined) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { throw new Error('storage') }
+    }
+    guideRef.current = next; setGuide(next)
+  }, [])
 
   const updateGuideNote = useCallback((guideNote: string) => {
     setGuide(current => ({ ...current, guideNote, updatedAt: new Date().toISOString() }))
@@ -43,7 +49,7 @@ export function useGuideStore() {
 
   const addPlace = useCallback((place: Place) => {
     setGuide(current => {
-      if (current.places.some(existing => existing.id === place.id || (existing.name === place.name && existing.address === place.address))) {
+      if (current.places.some(existing => existing.id === place.id || ((!place.recommendationKind || place.recommendationKind === 'venue') && (!existing.recommendationKind || existing.recommendationKind === 'venue') && existing.name === place.name && existing.address === place.address))) {
         return current
       }
       return {
@@ -75,17 +81,24 @@ export function useGuideStore() {
   const addSearchResult = useCallback(async (result: PlaceSearchResult, categoryId?: CategoryId, note = '', requireDurable = false) => {
     const guide = guideRef.current
     const id = `place-${result.id}`
-    const existing = guide.places.find(place => place.id === id || place.externalId === result.id || (place.name === result.name && place.address === result.address))
+    const existing = guide.places.find(place => place.id === id || place.externalId === result.id || (!result.recommendationKind || result.recommendationKind === 'venue') && (place.name === result.name && place.address === result.address))
     if (existing) {
+      if (requireDurable && result.recommendationKind && result.recommendationKind !== 'venue') {
+        const updated = { ...existing, name: result.name, lat: result.lat, lng: result.lng, recommendationKind: result.recommendationKind, note }
+        const next = patchPlace(guide, existing.id, updated)
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { throw new Error('storage') }
+        guideRef.current = next; setGuide(next); return updated
+      }
       if (requireDurable) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(guide)) } catch { throw new Error('storage') } }
       return existing
     }
     if (guide.places.length >= 100) throw new Error('A guide can include up to 100 places.')
-    const selected = guide.categories.some(c => c.id === categoryId) ? categoryId! : guessCategory(result.sourceCategory, result.name)
+    const selected = result.recommendationKind && result.recommendationKind !== 'venue' ? 'areas' : guide.categories.some(c => c.id === categoryId && c.id !== 'areas') ? categoryId! : guessCategory(result.sourceCategory, result.name)
     const place: Place = {
       id,
       externalId: result.id,
       provider: result.provider ?? 'demo',
+      recommendationKind: result.recommendationKind,
       name: result.name,
       subtitle: result.subtitle,
       address: result.address,

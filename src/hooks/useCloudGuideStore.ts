@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { guessCategory } from '../utils/category'
-import { orderCategoryPlaces, patchPlace, reorderPlaces } from '../utils/guideEditing'
+import { orderCategoryPlaces, patchPlace, reorderPlaces, withAreaCategory } from '../utils/guideEditing'
 import { getGuideSaveQueue } from '../services/guideSaves'
 import { addPlaceToGuide, getGuideById, persistGuideEdits, updateGuideVisibility } from '../services/guideRepository'
 import type { CategoryId, Guide, GuideVisibility, Place, PlaceSearchResult, SaveStatus } from '../types'
@@ -24,9 +24,9 @@ export function useCloudGuideStore(guideId: string, userId: string) {
       for (const edit of queue.getSnapshot().edits) {
         if (edit.kind === 'guideNote') next = { ...next, guideNote: edit.value }
         else if (edit.remove) next = { ...next, places: next.places.filter(p => p.guidePlaceId !== edit.linkId) }
-        else next = patchPlace(next, edit.clientId, { ...(edit.note !== undefined ? { note: edit.note } : {}), ...(edit.categoryId !== undefined ? { categoryId: edit.categoryId } : {}), ...(edit.sortOrder !== undefined ? { sortOrder: edit.sortOrder } : {}), ...(edit.isStarred !== undefined ? { isStarred: edit.isStarred } : {}) })
+        else next = patchPlace(next, edit.clientId, { ...(edit.name !== undefined ? { name: edit.name } : {}), ...(edit.lat !== undefined ? { lat: edit.lat } : {}), ...(edit.lng !== undefined ? { lng: edit.lng } : {}), ...(edit.recommendationKind !== undefined ? { recommendationKind: edit.recommendationKind } : {}), ...(edit.note !== undefined ? { note: edit.note } : {}), ...(edit.categoryId !== undefined ? { categoryId: edit.categoryId } : {}), ...(edit.sortOrder !== undefined ? { sortOrder: edit.sortOrder } : {}), ...(edit.isStarred !== undefined ? { isStarred: edit.isStarred } : {}) })
       }
-      change(next); void queue.flush().catch(() => {})
+      change(withAreaCategory(next)); void queue.flush().catch(() => {})
     }).catch(() => { if (active) setError('load') }).finally(() => { if (active) setLoading(false) })
     return () => { active = false; void queue.flush().catch(() => {}) }
   }, [guideId, userId, queue, attempt])
@@ -42,7 +42,7 @@ export function useCloudGuideStore(guideId: string, userId: string) {
     if (!current || !target?.guidePlaceId) return
     const next = patchPlace(current, id, patch), updated = next.places.find(p => p.id === id)!
     change(next)
-    queue.stage({ kind: 'place', clientId: id, linkId: target.guidePlaceId, ...(patch.note !== undefined ? { note: updated.note } : {}), ...(patch.categoryId !== undefined ? { categoryId: updated.categoryId, sortOrder: updated.sortOrder } : {}), ...(patch.isStarred !== undefined ? { isStarred: updated.isStarred } : {}) })
+    queue.stage({ kind: 'place', clientId: id, linkId: target.guidePlaceId, ...(patch.name !== undefined ? { name: patch.name } : {}), ...(patch.lat !== undefined ? { lat: patch.lat } : {}), ...(patch.lng !== undefined ? { lng: patch.lng } : {}), ...(patch.recommendationKind !== undefined ? { recommendationKind: patch.recommendationKind } : {}), ...(patch.note !== undefined ? { note: updated.note } : {}), ...(patch.categoryId !== undefined ? { categoryId: updated.categoryId, sortOrder: updated.sortOrder } : {}), ...(patch.isStarred !== undefined ? { isStarred: updated.isStarred } : {}) })
   }
   const removePlace = (id: string) => {
     const current = ref.current, target = current?.places.find(p => p.id === id)
@@ -65,18 +65,20 @@ export function useCloudGuideStore(guideId: string, userId: string) {
     await queue.flush()
     const current = ref.current
     if (!current) throw new Error('Loading')
-    const existing = current.places.find(p => p.externalId === result.id || p.name === result.name && p.address === result.address)
+    const existing = current.places.find(p => p.externalId === result.id || (!result.recommendationKind || result.recommendationKind === 'venue') && p.name === result.name && p.address === result.address)
     if (existing) return existing
-    const guessed = current.categories.some(c => c.id === categoryId) ? categoryId! : guessCategory(result.sourceCategory, result.name)
+    const guessed = result.recommendationKind && result.recommendationKind !== 'venue' ? 'areas' : current.categories.some(c => c.id === categoryId && c.id !== 'areas') ? categoryId! : guessCategory(result.sourceCategory, result.name)
     const place = await addPlaceToGuide(current, result, current.categories.some(c => c.id === guessed) ? guessed : 'other')
     if (ref.current) change({ ...ref.current, places: [...ref.current.places, place] })
     return place
   }
   const saveFirstPlace = async (result: PlaceSearchResult, note: string, categoryId?: CategoryId) => {
-    const pending = ref.current?.places.find(p => p.externalId === result.id || p.name === result.name && p.address === result.address)
-    if (pending && pending.note !== note) updatePlace(pending.id, { note })
+    const pending = ref.current?.places.find(p => p.externalId === result.id || (!result.recommendationKind || result.recommendationKind === 'venue') && p.name === result.name && p.address === result.address)
+    if (pending && result.recommendationKind && result.recommendationKind !== 'venue') updatePlace(pending.id, { name: result.name, lat: result.lat, lng: result.lng, recommendationKind: result.recommendationKind, note })
+    else if (pending && pending.note !== note) updatePlace(pending.id, { note })
     const place = await addSearchResult(result, categoryId)
-    if (place.note !== note) updatePlace(place.id, { note })
+    if (result.recommendationKind && result.recommendationKind !== 'venue') updatePlace(place.id, { name: result.name, lat: result.lat, lng: result.lng, recommendationKind: result.recommendationKind, note })
+    else if (place.note !== note) updatePlace(place.id, { note })
     await queue.flush()
     return ref.current?.places.find(p => p.id === place.id) ?? place
   }

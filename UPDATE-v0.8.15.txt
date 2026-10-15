@@ -1,0 +1,7 @@
+Run from your existing v0.8.14 project root after downloading the patch to Downloads.
+
+& { $ErrorActionPreference='Stop'; if (!(Test-Path .\package.json)) { throw 'Run this from your existing project folder.' }; $agVersion=(Get-Content .\package.json -Raw | ConvertFrom-Json).version; if ($agVersion -notin @('0.8.14','0.8.15')) { throw 'This patch requires v0.8.14.' }; $agTmp=Join-Path $env:TEMP ([guid]::NewGuid().ToString()); try { Expand-Archive -LiteralPath "$env:USERPROFILE\Downloads\anyones-guide-v0.8.15-patch.zip" -DestinationPath $agTmp; Copy-Item -Path "$agTmp\anyones-guide-v0.8.15-patch\*" -Destination . -Recurse -Force } finally { if (Test-Path -LiteralPath $agTmp) { Remove-Item -LiteralPath $agTmp -Recurse -Force } } }
+
+Apply supabase/migrations/0012_area_recommendations.sql once AFTER 0011 and BEFORE deploying this frontend.
+Then run npm test and npm run build. No environment or dependency change. Preserve .env.local and hosting settings.
+The migration and live deployment have not been run by the assistant.

@@ -1,3 +1,7 @@
+import { lazy, Suspense } from 'react'
+import { MapPin } from 'lucide-react'
+import { loadAreaDraft } from '../services/areaRecommendations'
+const AreaRecommendationEditor = lazy(() => import('./AreaRecommendationEditor').then(m => ({ default: m.AreaRecommendationEditor })))
 import { FirstPlace } from './FirstPlace'
 import { loadImportDraft } from '../services/recommendationImport'
 import { loadFirstPlaceDraft } from '../services/firstPlaceDraft'
@@ -55,6 +59,7 @@ type DragPreview = {
 export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, onFlushGuideNote, guideNoteSaveStatus, storageUnavailable, onRemovePlace, onMovePlace, onReorderPlace, onUpdateVisibility, backPath, previewPath, publicPath, addPath, saveError, guestMode = false, shareLabel, onShare, contextBanner, initialCategory, addedPlaceId, firstPlaceContext, onSaveFirstPlace }: Props) {
   const { t, locale, categoryLabel } = useI18n()
   const [category, setCategory] = useState<CategoryId | 'all'>(() => editorCategory(guide.categories, initialCategory, !guide.places.length))
+  const [areaEditing, setAreaEditing] = useState<Place | null>(null)
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [visibilityOpen, setVisibilityOpen] = useState(false)
   const [visibilityBusy, setVisibilityBusy] = useState(false)
@@ -74,7 +79,7 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
   const firstPlaceScope = `${guestMode ? 'guest' : guide.ownerId ? 'owner:' + guide.ownerId : 'local'}:${guide.id}`
   const [starting, setStarting] = useState(() => {
     const pending = loadImportDraft(firstPlaceScope)
-    return empty || Boolean(loadFirstPlaceDraft(firstPlaceScope)?.selected) || Boolean(pending?.first && pending.rows.some(row => row.attempted && row.chosen && !row.savedId))
+    return empty || Boolean(loadAreaDraft(firstPlaceScope + ':new')?.attempted) || Boolean(loadFirstPlaceDraft(firstPlaceScope)?.selected) || Boolean(pending?.first && pending.rows.some(row => row.attempted && row.chosen && !row.savedId))
   })
   const [firstSavedId, setFirstSavedId] = useState<string | undefined>()
   const focusPlaceId = firstSavedId ?? addedPlaceId
@@ -345,7 +350,7 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
         </div>}
         {grouped.map(group => (
           <div className="editor-category" key={group.id}>
-            <h2>{categoryLabel(group)} <span>· {group.places.length}</span></h2>
+            <h2>{group.id === 'areas' ? t('area.section') : categoryLabel(group)} <span>· {group.places.length}</span></h2>
             {group.places.map(place => {
               const noteOver = place.note.length > NOTE_SOFT_LIMIT
               return (
@@ -355,7 +360,7 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
                   </button>
                   <div className="editor-place-copy">
                     <div className="editor-place-title-row"><strong tabIndex={-1}>{place.name}</strong><AuthorStar place={place} disabled={Boolean(draggingId)} onChange={isStarred => { onUpdatePlace(place.id, { isStarred }); }} /></div>
-                    <span className="editor-place-subtitle">{place.subtitle || categoryLabel(group)}</span>
+                    <span className="editor-place-subtitle">{place.recommendationKind === 'area' || place.recommendationKind === 'street' ? t('area.' + place.recommendationKind) : place.subtitle || categoryLabel(group)}</span>
                     <textarea value={place.note} rows={3} maxLength={guestMode ? 5000 : undefined} placeholder={t('editor.notePlaceholder')} onChange={event => onUpdatePlace(place.id, { note: event.target.value })} aria-label={t('editor.noteLabel', { name: place.name })} />
                     <span className={`note-guidance ${noteOver ? 'over' : ''}`}>{place.note.length} / {NOTE_SOFT_LIMIT}</span>
                   </div>
@@ -363,10 +368,11 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
                     <button className="icon-button" onClick={() => setOpenMenu(openMenu === place.id ? null : place.id)} aria-expanded={openMenu === place.id} aria-label={t('editor.options', { name: place.name })}><MoreHorizontal size={19} /></button>
                     {openMenu === place.id && (
                       <div className="row-menu">
-                        <label>{t('editor.category')} <ChevronDown size={13} /></label>
-                        <select aria-label={t('editor.category')} value={place.categoryId} onChange={event => { onUpdatePlace(place.id, { categoryId: event.target.value as CategoryId }); setOpenMenu(null) }}>
-                          {guide.categories.map(item => <option value={item.id} key={item.id}>{categoryLabel(item)}</option>)}
-                        </select>
+                        {(!place.recommendationKind || place.recommendationKind === 'venue') && <label>{t('editor.category')} <ChevronDown size={13} /></label>}
+                        {(!place.recommendationKind || place.recommendationKind === 'venue') && <select aria-label={t('editor.category')} value={place.categoryId} onChange={event => { onUpdatePlace(place.id, { categoryId: event.target.value as CategoryId }); setOpenMenu(null) }}>
+                          {guide.categories.filter(item => item.id !== 'areas').map(item => <option value={item.id} key={item.id}>{categoryLabel(item)}</option>)}
+                        </select>}
+                        {(place.recommendationKind === 'area' || place.recommendationKind === 'street') && <button type="button" onClick={() => { setAreaEditing(place); setOpenMenu(null) }}>{t('area.edit')}</button>}
                         <button disabled={group.places.filter(p => Boolean(p.isStarred) === Boolean(place.isStarred))[0]?.id === place.id} onClick={() => { onMovePlace(place.id, -1); setOpenMenu(null) }}><ArrowUp size={15} /> {t('editor.moveUp')}</button>
                         <button disabled={group.places.filter(p => Boolean(p.isStarred) === Boolean(place.isStarred)).at(-1)?.id === place.id} onClick={() => { onMovePlace(place.id, 1); setOpenMenu(null) }}><ArrowDown size={15} /> {t('editor.moveDown')}</button>
                         <button className="danger" onClick={() => { onRemovePlace(place.id); setOpenMenu(null) }}><Trash2 size={15} /> {t('editor.remove')}</button>
@@ -386,6 +392,7 @@ export function Editor({ guide, onNavigate, onUpdatePlace, onUpdateGuideNote, on
           <GripVertical size={17} /><div><strong>{dragPreview.name}</strong>{dragPreview.subtitle && <span>{dragPreview.subtitle}</span>}</div>
         </div>
       )}
+      {areaEditing && <Suspense fallback={<div className="area-opening" role="status">{t('common.loading')}</div>}><AreaRecommendationEditor guide={guide} scope={firstPlaceScope} existing={areaEditing} onClose={() => setAreaEditing(null)} onSave={async (result, note) => { onUpdatePlace(areaEditing.id, { name: result.name, lat: result.lat, lng: result.lng, recommendationKind: result.recommendationKind, note }); await onFlushGuideNote?.() }} /></Suspense>}
     </main>
   )
 }

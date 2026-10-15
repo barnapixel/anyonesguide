@@ -13,6 +13,7 @@ export function isFirstPlaceDraft(value: unknown): value is FirstPlaceDraft {
     && draft.updatedAt <= Date.now() + 60000 && Date.now() - draft.updatedAt < maxAge
     && (place === null || Boolean(place && text(place.id, 1000) && place.id.trim()
       && text(place.name, 300) && place.name.trim() && text(place.address, 1500)
+      && (place.recommendationKind === undefined || ['venue','area','street'].includes(place.recommendationKind))
       && (place.subtitle === undefined || text(place.subtitle, 500))
       && (place.sourceCategory === undefined || text(place.sourceCategory, 300))
       && (place.provider === undefined || ['geoapify', 'demo', 'manual'].includes(place.provider))

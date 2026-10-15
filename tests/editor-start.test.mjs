@@ -6,6 +6,7 @@ import { JSDOM } from 'jsdom'
 import { createServer } from 'vite'
 import React, { act } from 'react'
 
+let useCloudGuideStore, AreaRecommendationEditor, mapControls, areaService
 let dom, server, root, I18nProvider, Editor, CloudEditorPage, GuestResponsePage, PublicGuide
 let createGuestDraft, saveGuestDraft, loadGuestDraft, categories, importService, useGuideStore
 const originalFetch = globalThis.fetch
@@ -36,6 +37,8 @@ before(async () => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
   window.matchMedia = () => ({ matches: true })
   window.scrollTo = () => {}
+  window.HTMLDialogElement.prototype.showModal = function(){this.setAttribute('open','')}
+  window.HTMLDialogElement.prototype.close = function(){this.removeAttribute('open')}
   const { createRoot } = await import('react-dom/client')
   root = createRoot(document.getElementById('app'))
   server = await createServer({ envDir: false, server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom', plugins: [{
@@ -47,7 +50,7 @@ before(async () => {
       if (id === '\0virtual:start-repository') return `
         export async function getGuideById(){return structuredClone(globalThis.__start.guide)}
         export async function addPlaceToGuide(guide,result,categoryId){const f=globalThis.__start;f.adds.push({categoryId});if(f.failAdd)throw Error('offline');if(f.addWait)await f.addWait;const existing=f.guide.places.find(p=>p.externalId===result.id);if(existing)return existing;const place={...result,id:crypto.randomUUID(),guidePlaceId:crypto.randomUUID(),externalId:result.id,categoryId,note:'',sortOrder:0,isStarred:false};f.guide.places.push(place);return place}
-        export async function persistGuideEdits(id,edits){const f=globalThis.__start;f.saves.push(edits);if(f.failSave || f.failSaveFor && edits.some(e=>e.note===f.failSaveFor))throw Error('offline');for(const edit of edits){if(edit.kind==='guideNote')f.guide.guideNote=edit.value;else{const place=f.guide.places.find(p=>p.guidePlaceId===edit.linkId);if(place&&edit.note!==undefined)place.note=edit.note}}}
+        export async function persistGuideEdits(id,edits){const f=globalThis.__start;f.saves.push(edits);if(f.failSave || f.failSaveFor && edits.some(e=>e.note===f.failSaveFor))throw Error('offline');for(const edit of edits){if(edit.kind==='guideNote')f.guide.guideNote=edit.value;else{const place=f.guide.places.find(p=>p.guidePlaceId===edit.linkId);if(place){const {kind,clientId,linkId,...patch}=edit;Object.assign(place,patch)}}}}
         export async function updateGuideVisibility(){}
       `
     },
@@ -56,9 +59,13 @@ before(async () => {
       return source.replaceAll(/(['"])(?:\.\.\/|\.\/)config\1/g, "'virtual:start-config'")
         .replaceAll("'../services/placeSearch'", "'virtual:start-search'")
         .replaceAll("'../services/guideRepository'", "'virtual:start-repository'")
+        .replaceAll("'maplibre-gl'", JSON.stringify(new URL('./helpers/maplibre.mjs', import.meta.url).pathname))
     },
   }] })
   ;({ I18nProvider } = await server.ssrLoadModule('/src/i18n.tsx'))
+  ;({ AreaRecommendationEditor } = await server.ssrLoadModule('/src/components/AreaRecommendationEditor.tsx'))
+  ;({ controls: mapControls } = await server.ssrLoadModule('/tests/helpers/maplibre.mjs'))
+  areaService = await server.ssrLoadModule('/src/services/areaRecommendations.ts')
   ;({ Editor } = await server.ssrLoadModule('/src/components/Editor.tsx'))
   ;({ CloudEditorPage } = await server.ssrLoadModule('/src/components/CloudEditorPage.tsx'))
   ;({ GuestResponsePage } = await server.ssrLoadModule('/src/components/GuestResponsePage.tsx'))
@@ -66,6 +73,7 @@ before(async () => {
   ;({ createGuestDraft, saveGuestDraft, loadGuestDraft } = await server.ssrLoadModule('/src/services/guestDrafts.ts'))
   ;({ categories } = await server.ssrLoadModule('/src/data/demo.ts'))
   importService = await server.ssrLoadModule('/src/services/recommendationImport.ts')
+  ;({ useCloudGuideStore } = await server.ssrLoadModule('/src/hooks/useCloudGuideStore.ts'))
   ;({ useGuideStore } = await server.ssrLoadModule('/src/hooks/useGuideStore.ts'))
 })
 afterEach(async () => { await act(async () => root.render(null)); localStorage.clear(); globalThis.fetch = originalFetch; delete globalThis.__start })
@@ -634,4 +642,98 @@ test('screenshot upload and clipboard image assemble image requests without pers
     globalThis.Image = class { naturalWidth = 10000; naturalHeight = 10000; async decode() {} }
     await assert.rejects(importService.prepareScreenshot(file), /import.imageSize/)
   } finally { globalThis.Image = originalImage; document.createElement = create; URL.createObjectURL = createUrl; URL.revokeObjectURL = revokeUrl }
+})
+
+
+test('EN/PL area entry sits immediately below search without changing place search', async () => {
+  for (const locale of ['en','pl']) {
+    localStorage.setItem('anyones-guide:locale',locale)
+    globalThis.__start = { routes: [] }
+    await render(Editor,{...editorProps(guide()),onSaveFirstPlace(){}})
+    const bar=document.querySelector('.area-entry-bar')
+    assert.equal(bar.previousElementSibling.className,'search-box')
+    assert.ok(bar.textContent.length>20)
+    assert.equal(document.querySelector('select'),null)
+    await act(async()=>root.render(null))
+  }
+})
+
+test('manual area preserves exact moved coordinates and latest writing across failed saves and reopening', async()=>{
+  const scope=crypto.randomUUID(),current=guide(),saved=[]
+  let fail=true
+  const props={guide:current,scope,onClose(){},onSave:async(result,note)=>{saved.push({result,note});if(fail)throw Error('offline');return {id:'saved'}}}
+  await render(AreaRecommendationEditor,props)
+  await act(async()=>mapControls.instances.at(-1).panTo({lat:54.443321,lng:18.563219}))
+  await click(document.querySelector('.area-map-actions .primary-button'))
+  await change(document.querySelector('.area-details input'),'My favourite part of Oliwa')
+  await change(document.querySelector('.area-details textarea'),'Start here, then explore the side streets.')
+  await click(document.querySelector('.area-type-options button:last-child'))
+  await act(async()=>document.querySelector('form.area-details').dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true})))
+  assert.ok(document.querySelector('.area-details [role="alert"]'))
+  assert.equal(areaService.loadAreaDraft(scope+':new').attempted,true)
+  await act(async()=>root.render(null))
+  await render(AreaRecommendationEditor,props)
+  assert.equal(document.querySelector('.area-details input').value,'My favourite part of Oliwa')
+  await change(document.querySelector('.area-details textarea'),'My revised note')
+  fail=false
+  await act(async()=>document.querySelector('form.area-details').dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true})))
+  assert.deepEqual(saved[1].result,{id:saved[0].result.id,provider:'manual',recommendationKind:'street',name:'My favourite part of Oliwa',address:'',subtitle:'',lat:54.443321,lng:18.563219})
+  assert.equal(saved[1].note,'My revised note')
+  assert.equal(areaService.loadAreaDraft(scope+':new'),null)
+})
+
+test('canceling a named area retains writing without marking an attempted save',async()=>{
+ const scope=crypto.randomUUID();let closed=false
+ await render(AreaRecommendationEditor,{guide:guide(),scope,onClose(){closed=true},onSave(){throw Error('should not save')}})
+ await click(document.querySelector('.area-map-actions .primary-button'))
+ await change(document.querySelector('.area-details input'),'A quiet corner')
+ await click(document.querySelector('.area-editor header button:last-child'))
+ assert.equal(closed,true)
+ const draft=areaService.loadAreaDraft(scope+':new');assert.equal(draft.name,'A quiet corner');assert.equal(draft.attempted,undefined)
+})
+
+test('a late geographic suggestion never replaces an author-written title or the chosen pin',async()=>{
+ const config=await server.ssrLoadModule('virtual:start-config'),scope=crypto.randomUUID();let resolve
+ config.appConfig.geoapifyApiKey='fixture'
+ globalThis.fetch=()=>new Promise(r=>{resolve=r})
+ try{
+  await render(AreaRecommendationEditor,{guide:guide(),scope,onClose(){},onSave(){}})
+  await act(async()=>mapControls.instances.at(-1).panTo({lat:54.4,lng:18.5}))
+  await click(document.querySelector('.area-map-actions .primary-button'))
+  await change(document.querySelector('.area-details input'),'The streets I love')
+  await click(document.querySelector('.area-type-options button:last-child'))
+  await act(async()=>resolve({ok:true,json:async()=>({results:[{suburb:'Provider suburb',street:'Provider street',lat:55,lon:19}]})}))
+  assert.equal(document.querySelector('.area-details input').value,'The streets I love')
+  assert.deepEqual(areaService.loadAreaDraft(scope+':new').point,{lat:54.4,lng:18.5})
+ }finally{config.appConfig.geoapifyApiKey=''}
+})
+test('map startup failure cannot silently save the city centre; retry restores manual placement',async()=>{
+ mapControls.fail=true
+ try{
+  await render(AreaRecommendationEditor,{guide:guide(),scope:crypto.randomUUID(),onClose(){},onSave(){throw Error('not positioned')}})
+  assert.equal(document.querySelector('.area-map-actions .primary-button').disabled,true)
+  assert.ok(document.querySelector('.area-map-actions [role="alert"]'))
+  mapControls.fail=false
+  await click(document.querySelector('.area-map-actions .text-button'))
+  assert.equal(document.querySelector('.area-map-actions .primary-button').disabled,false)
+ }finally{mapControls.fail=false}
+})
+
+test('owner retry after a partial manual save persists revised name, coordinates and note without another pin',async()=>{
+ const current=guide();globalThis.__start={guide:current,routes:[],adds:[],saves:[],failSave:true}
+ let store
+ function Harness(){store=useCloudGuideStore(current.id,'owner');return null}
+ await render(Harness,{})
+ for(let i=0;i<50&&!store.guide;i++)await act(async()=>new Promise(r=>setTimeout(r,10)))
+ const result={id:crypto.randomUUID(),provider:'manual',recommendationKind:'area',name:'First title',address:'',lat:54.4,lng:18.5}
+ await act(async()=>assert.rejects(store.saveFirstPlace(result,'Original note')))
+ assert.equal(current.places.length,1)
+ globalThis.__start.failSave=false
+ await act(async()=>store.saveFirstPlace({...result,name:'My revised corner',lat:54.443321,lng:18.563219,recommendationKind:'street'},'Revised note'))
+ assert.equal(globalThis.__start.adds.length,1)
+ assert.equal(current.places.length,1)
+ assert.equal(current.places[0].name,'My revised corner')
+ assert.equal(current.places[0].lat,54.443321)
+ assert.equal(current.places[0].recommendationKind,'street')
+ assert.equal(current.places[0].note,'Revised note')
 })

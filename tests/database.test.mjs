@@ -9,7 +9,7 @@ async function role(name,uid,fn){await db.exec(`set role ${name}`);await q("sele
 const rpc=(name,...args)=>q(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) as result`,args).then(r=>r.rows[0].result)
 const poi=(id='poi',category='eat')=>({provider:'geoapify',externalId:id,name:'Café',address:'Warsaw',lat:52.23,lng:21.01,categoryId:category})
 const draft=()=>({id:crypto.randomUUID(),key:crypto.randomUUID(),requesterName:'Ada',requestedCity:'Warsaw',guide:{city:'Warsaw',country:'Poland',guideNote:'Weekend',center:{lat:52.23,lng:21.01},places:[{...poi(),note:'Favourite'}]}})
-let preserved=false, shortUpgradePreserved=false
+let areaUpgradePreserved=false, preserved=false, shortUpgradePreserved=false
 before(async()=>{
  await db.exec(`create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,raw_user_meta_data jsonb default '{}');create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;alter default privileges in schema public grant execute on functions to anon,authenticated;`)
  const files=(await readdir(new URL('../supabase/migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort()
@@ -45,6 +45,15 @@ before(async()=>{
    assert.deepEqual({...updated,shortCode:undefined},{...legacy,shortCode:undefined})
    assert.deepEqual(await role('anon',null,()=>rpc('read_guide_invitation_by_code',updated.shortCode)),updated)
    shortUpgradePreserved=true
+  }else if(file.startsWith('0012')){
+   const places=(await q('select to_jsonb(p) as p from public.places p order by id')).rows
+   const guides=(await q('select to_jsonb(g) as g from public.guides g order by id')).rows
+   const categories=(await q('select to_jsonb(c) as c from public.guide_categories c order by guide_id,key')).rows
+   await db.exec(await readFile(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'))
+   assert.deepEqual((await q("select to_jsonb(p)-'recommendation_kind' as p from public.places p order by id")).rows,places)
+   assert.deepEqual((await q('select to_jsonb(g) as g from public.guides g order by id')).rows,guides)
+   assert.deepEqual((await q("select to_jsonb(c) as c from public.guide_categories c where key <> 'areas' order by guide_id,key")).rows,categories)
+   areaUpgradePreserved=true
   }else await db.exec((await readFile(new URL('../supabase/migrations/'+file,import.meta.url),'utf8')).replace('create extension if not exists pgcrypto;',''))
  }
 })
@@ -262,4 +271,42 @@ test('confirmed invitation destinations are validated, immutable on retry and re
  await role('authenticated',a,async()=>{
   await assert.rejects(rpc('create_guide_invitation_with_destination',key,'Boris','Warsaw','en',dest))
  })
+})
+
+
+test('0012 preserves historical venue IDs/coordinates, guides and categories',()=>assert.equal(areaUpgradePreserved,true))
+
+test('manual areas retry by stable ID while same-name pins remain separate and geographic edits are atomic/owner-only',async()=>{
+ const area={...poi(crypto.randomUUID(),'areas'),provider:'manual',name:'Old Town',address:'',recommendationKind:'area',lat:54.351234,lng:18.654321}
+ const first=await role('authenticated',a,()=>rpc('add_guide_place',ga,area))
+ const retry=await role('authenticated',a,()=>rpc('add_guide_place',ga,area))
+ assert.equal(retry.place.id,first.place.id)
+ const second=await role('authenticated',a,()=>rpc('add_guide_place',ga,{...area,externalId:crypto.randomUUID(),lat:54.36}))
+ assert.notEqual(second.place.id,first.place.id)
+ await role('authenticated',a,()=>rpc('save_guide_edits',ga,{places:[{id:first.link.id,name:'My favourite streets',lat:54.359876,lng:18.651234,recommendationKind:'street',isStarred:true,note:'Start here'}]}))
+ await role('authenticated',b,()=>assert.rejects(rpc('save_guide_edits',ga,{places:[{id:first.link.id,name:'Changed'}]})))
+ await role('authenticated',a,()=>assert.rejects(rpc('save_guide_edits',ga,{places:[{id:first.link.id,name:'Rollback',lat:91}]})))
+ const row=(await q('select name,lat,lng,recommendation_kind from public.places where id=$1',[first.place.id])).rows[0]
+ assert.deepEqual(row,{name:'My favourite streets',lat:54.359876,lng:18.651234,recommendation_kind:'street'})
+ assert.equal((await q('select recommendation_kind from public.places where id=$1',[second.place.id])).rows[0].recommendation_kind,'area')
+ await role('authenticated',a,()=>assert.rejects(rpc('save_guide_edits',ga,{places:[{id:first.link.id,categoryId:'eat'}]})))
+ await role('anon',null,async()=>assert.equal((await q('select name from public.places where id=$1',[first.place.id])).rows[0].name,'My favourite streets'))
+})
+test('legacy venues remain venues; arbitrary venue metadata and malformed manual kinds are rejected',async()=>{
+ const venue=await role('authenticated',a,()=>rpc('add_guide_place',ga,poi()))
+ assert.equal(venue.place.recommendation_kind,'venue')
+ await role('authenticated',a,async()=>{
+  await assert.rejects(rpc('save_guide_edits',ga,{places:[{id:venue.link.id,name:'Renamed venue'}]}))
+  for(const patch of [{recommendationKind:'polygon'},{recommendationKind:'area',categoryId:'eat'},{recommendationKind:'street',categoryId:'areas',provider:'geoapify'},{categoryId:'areas'}])await assert.rejects(rpc('add_guide_place',ga,{...poi(crypto.randomUUID()),...patch}))
+ })
+})
+test('guest publication retains manual pin/title/kind/star/note and retries the same claim',async()=>{
+ const d=draft();d.guide.places.push({...poi(crypto.randomUUID(),'areas'),provider:'manual',recommendationKind:'street',name:'A good starting spot',address:'',note:'Wander north',isStarred:true,lat:54.443321,lng:18.563219})
+ await role('anon',null,()=>rpc('save_guest_guide',d.id,d.key,d))
+ const gid=await role('authenticated',a,()=>rpc('claim_guest_guide',d.id,d.key))
+ assert.equal(await role('authenticated',a,()=>rpc('claim_guest_guide',d.id,d.key)),gid)
+ const row=(await q("select p.name,p.lat,p.lng,p.recommendation_kind,gp.category_key,gp.note,gp.is_starred from public.places p join public.guide_places gp on gp.place_id=p.id where gp.guide_id=$1 and p.recommendation_kind='street'",[gid])).rows[0]
+ assert.deepEqual(row,{name:'A good starting spot',lat:54.443321,lng:18.563219,recommendation_kind:'street',category_key:'areas',note:'Wander north',is_starred:true})
+ const bad=draft();bad.guide.places[0].recommendationKind='area'
+ await role('anon',null,()=>assert.rejects(rpc('save_guest_guide',bad.id,bad.key,bad)))
 })

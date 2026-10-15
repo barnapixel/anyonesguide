@@ -1,3 +1,4 @@
+import { withAreaCategory } from '../utils/guideEditing'
 import type { Category, DestinationSearchResult, Guide } from '../types'
 import { displayCityName } from '../../shared/city-names.mjs'
 
@@ -38,7 +39,9 @@ export function isGuestDraft(value: unknown): value is GuestDraft {
     && Array.isArray(g.categories) && g.categories.length <= 20 && g.categories.every(c => c && typeof c.id === 'string' && typeof c.label === 'string' && typeof c.icon === 'string' && Number.isFinite(c.sortOrder))
     && Array.isArray(g.places) && g.places.length <= 100 && g.places.every(p => p && typeof p.id === 'string'
       && typeof p.name === 'string' && p.name.trim().length > 0 && p.name.length <= 300 && typeof p.address === 'string' && p.address.length <= 1500
-      && typeof p.note === 'string' && p.note.length <= 5000 && ['eat','coffee','drink','see','shop','other'].includes(p.categoryId) && point(p)
+      && typeof p.note === 'string' && p.note.length <= 5000 && ['eat','coffee','drink','see','shop','other','areas'].includes(p.categoryId) && point(p)
+      && (p.recommendationKind === undefined || ['venue','area','street'].includes(p.recommendationKind))
+      && (p.recommendationKind === 'area' || p.recommendationKind === 'street' ? p.categoryId === 'areas' && p.provider === 'manual' : p.categoryId !== 'areas')
       && (p.subtitle === undefined || typeof p.subtitle === 'string' && p.subtitle.length <= 500)
       && (p.externalId === undefined || typeof p.externalId === 'string' && p.externalId.length <= 1000)
       && (p.provider === undefined || ['geoapify','demo','manual'].includes(p.provider))
@@ -66,16 +69,18 @@ export function createGuestDraft(destination: DestinationSearchResult, requester
     id, key: crypto.randomUUID(), requesterName, requestedCity,
     ...(invitationId ? { invitationId } : {}),
     ...(requesterAnonymous ? { requesterAnonymous: true } : {}),
-    guide: {
+    guide: withAreaCategory({
       id, slug: 'guest-draft', city, country: destination.country,
       authorName: 'A local', title: city, intro: '', guideNote: '',
       center: { lat: destination.lat, lng: destination.lng }, categories: categories.map(category => ({ ...category })),
       places: [], visibility: 'draft', isPublished: false, updatedAt: new Date().toISOString(),
-    },
+    }),
   }
 }
 
 export function withGuestCityName(draft: GuestDraft): GuestDraft {
+  const guide = withAreaCategory(draft.guide)
+  if (guide !== draft.guide) draft = { ...draft, guide }
   const city = displayCityName(draft.guide.city, draft.guide.country)
   if (city === draft.guide.city) return draft
   return { ...draft, guide: { ...draft.guide, city, title: draft.guide.title === draft.guide.city ? city : draft.guide.title } }

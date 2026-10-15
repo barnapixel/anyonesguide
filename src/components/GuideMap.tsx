@@ -72,6 +72,8 @@ function cameraPadding(): PaddingOptions {
   return mapCameraPadding(mobile, clearance, toolbarBottom)
 }
 
+export const getGuideMapStyle = () => appConfig.geoapifyApiKey ? geoapifyRasterStyle(appConfig.geoapifyApiKey) : osmFallbackStyle
+
 function previewCameraPadding(map: Map): PaddingOptions {
   // Credits and the Explore cue share the bottom edge. Leave room for the
   // actual wrapped credit height, including marker radius, on narrow screens.

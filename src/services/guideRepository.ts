@@ -1,7 +1,8 @@
 import type { GuideEdit } from './guideSaves'
 import { displayCityName } from '../../shared/city-names.mjs'
 import { requireSupabase } from '../lib/supabase'
-import type { DestinationSearchResult, ExploreGuideSummary, Guide, GuideSummary, GuideVisibility, Place, PlaceSearchResult, Profile } from '../types'
+import { withAreaCategory } from '../utils/guideEditing'
+import type { RecommendationKind, DestinationSearchResult, ExploreGuideSummary, Guide, GuideSummary, GuideVisibility, Place, PlaceSearchResult, Profile } from '../types'
 
 type GuideRow = {
   id: string
@@ -25,6 +26,7 @@ type CategoryRow = { key: string; label: string; icon: string; sort_order: numbe
 type PlaceRow = {
   id: string
   provider: string
+  recommendation_kind?: RecommendationKind
   provider_place_id: string | null
   name: string
   subtitle: string | null
@@ -63,7 +65,7 @@ async function hydrateGuide(row: GuideRow, profile?: ProfileRow | null): Promise
   const client = requireSupabase()
   const [{ data: categoryRows, error: categoryError }, { data: guidePlaceRows, error: placesError }] = await Promise.all([
     client.from('guide_categories').select('key,label,icon,sort_order').eq('guide_id', row.id).order('sort_order'),
-    client.from('guide_places').select('id,category_key,note,sort_order,is_starred,place_id,places(id,provider,provider_place_id,name,subtitle,address,city,lat,lng)').eq('guide_id', row.id).order('sort_order'),
+    client.from('guide_places').select('id,category_key,note,sort_order,is_starred,place_id,places(id,provider,provider_place_id,name,subtitle,address,city,lat,lng,recommendation_kind)').eq('guide_id', row.id).order('sort_order'),
   ])
   if (categoryError) throw categoryError
   if (placesError) throw placesError
@@ -90,6 +92,7 @@ async function hydrateGuide(row: GuideRow, profile?: ProfileRow | null): Promise
       guidePlaceId: item.id,
       externalId: rawPlace.provider_place_id ?? undefined,
       provider: rawPlace.provider,
+      recommendationKind: rawPlace.recommendation_kind ?? 'venue',
       name: rawPlace.name,
       subtitle: rawPlace.subtitle ?? undefined,
       address: rawPlace.address,
@@ -105,7 +108,7 @@ async function hydrateGuide(row: GuideRow, profile?: ProfileRow | null): Promise
   const publicName = owner.display_name.trim() || 'A local'
   const city = displayCityName(row.city, row.country)
 
-  return {
+  return withAreaCategory({
     id: row.id,
     ownerId: row.owner_id,
     profileSlug: owner.slug,
@@ -122,7 +125,7 @@ async function hydrateGuide(row: GuideRow, profile?: ProfileRow | null): Promise
     visibility: row.visibility ?? (row.is_published ? 'unlisted' : 'draft'),
     isPublished: row.visibility ? row.visibility !== 'draft' : row.is_published,
     updatedAt: row.updated_at,
-  }
+  })
 }
 
 export async function getMyProfile(userId: string): Promise<Profile> {
@@ -290,14 +293,14 @@ export async function persistGuideEdits(guideId: string, edits: GuideEdit[]) {
   const changes: { guideNote?: string; places: Record<string, unknown>[] } = { places: [] }
   for (const edit of edits) {
     if (edit.kind === 'guideNote') changes.guideNote = edit.value
-    else changes.places.push({ id: edit.linkId, ...(edit.note !== undefined ? { note: edit.note } : {}), ...(edit.categoryId !== undefined ? { categoryId: edit.categoryId } : {}), ...(edit.sortOrder !== undefined ? { sortOrder: edit.sortOrder } : {}), ...(edit.isStarred !== undefined ? { isStarred: edit.isStarred } : {}), ...(edit.remove ? { remove: true } : {}) })
+    else changes.places.push({ id: edit.linkId, ...(edit.name !== undefined ? { name: edit.name } : {}), ...(edit.lat !== undefined ? { lat: edit.lat } : {}), ...(edit.lng !== undefined ? { lng: edit.lng } : {}), ...(edit.recommendationKind !== undefined ? { recommendationKind: edit.recommendationKind } : {}), ...(edit.note !== undefined ? { note: edit.note } : {}), ...(edit.categoryId !== undefined ? { categoryId: edit.categoryId } : {}), ...(edit.sortOrder !== undefined ? { sortOrder: edit.sortOrder } : {}), ...(edit.isStarred !== undefined ? { isStarred: edit.isStarred } : {}), ...(edit.remove ? { remove: true } : {}) })
   }
   const { error } = await requireSupabase().rpc('save_guide_edits', { p_guide_id: guideId, p_changes: changes })
   if (error) throw error
 }
 export async function addPlaceToGuide(guide: Guide, result: PlaceSearchResult, categoryId = 'other'): Promise<Place> {
-  const { data, error } = await requireSupabase().rpc('add_guide_place', { p_guide_id: guide.id, p_place: { provider: result.provider ?? 'geoapify', externalId: result.id, name: result.name, subtitle: result.subtitle, address: result.address, lat: result.lat, lng: result.lng, categoryId } })
+  const { data, error } = await requireSupabase().rpc('add_guide_place', { p_guide_id: guide.id, p_place: { provider: result.provider ?? 'geoapify', externalId: result.id, name: result.name, subtitle: result.subtitle, address: result.address, lat: result.lat, lng: result.lng, categoryId, recommendationKind: result.recommendationKind ?? 'venue' } })
   if (error) throw error
   const p = data.place as PlaceRow, link = data.link
-  return { id: p.id, guidePlaceId: link.id, externalId: p.provider_place_id ?? undefined, provider: p.provider, name: p.name, subtitle: p.subtitle ?? undefined, address: p.address, lat: Number(p.lat), lng: Number(p.lng), categoryId: link.category_key, note: link.note, sortOrder: link.sort_order, isStarred: link.is_starred === true }
+  return { id: p.id, guidePlaceId: link.id, externalId: p.provider_place_id ?? undefined, provider: p.provider, recommendationKind: p.recommendation_kind ?? 'venue', name: p.name, subtitle: p.subtitle ?? undefined, address: p.address, lat: Number(p.lat), lng: Number(p.lng), categoryId: link.category_key, note: link.note, sortOrder: link.sort_order, isStarred: link.is_starred === true }
 }

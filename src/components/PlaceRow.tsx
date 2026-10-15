@@ -14,7 +14,8 @@ type Props = {
 
 export function PlaceRow({ place, city, country, onClick }: Props) {
   const { t } = useI18n()
-  const street = placeStreet(place, city, country)
+  const { recommendationKind } = place
+  const street = recommendationKind === 'area' || recommendationKind === 'street' ? t('area.' + recommendationKind) : placeStreet(place, city, country)
   return (
     <button className="place-row" onClick={onClick}>
       <span className="place-copy">

@@ -5,7 +5,7 @@ import ts from 'typescript'
 
 async function loadModule(path, nonce = '') {
   const source = await readFile(new URL(path, import.meta.url), 'utf8')
-  const rewritten = source.replace('../../shared/city-names.mjs', new URL('../shared/city-names.mjs', import.meta.url).href).replace("../../shared/share-copy.mjs", new URL('../shared/share-copy.mjs', import.meta.url).href)
+  const rewritten = source.replace("'../utils/guideEditing'", JSON.stringify('data:text/javascript,' + encodeURIComponent(ts.transpileModule(await readFile(new URL('../src/utils/guideEditing.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText))).replace('../../shared/city-names.mjs', new URL('../shared/city-names.mjs', import.meta.url).href).replace("../../shared/share-copy.mjs", new URL('../shared/share-copy.mjs', import.meta.url).href)
   const javascript = ts.transpileModule(rewritten, { compilerOptions: { module: ts.ModuleKind.ES2022 } }).outputText
   return import(`data:text/javascript,${encodeURIComponent(javascript + '\n//' + nonce)}`)
 }

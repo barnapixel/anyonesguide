@@ -6,6 +6,7 @@ export const categories: Category[] = [
   { id: 'drink', label: 'Drink', icon: '🍺', sortOrder: 2 },
   { id: 'see', label: 'See', icon: '🏛️', sortOrder: 3 },
   { id: 'shop', label: 'Shop', icon: '🛒', sortOrder: 4 },
+  { id: 'areas', label: 'Areas to explore', icon: '▦', sortOrder: 6 },
   { id: 'other', label: 'Other', icon: '•', sortOrder: 5 },
 ]
 

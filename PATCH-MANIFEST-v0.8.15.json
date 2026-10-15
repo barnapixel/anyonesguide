@@ -1,0 +1,166 @@
+{
+  "version": "0.8.15",
+  "baseVersion": "0.8.14",
+  "migration": "supabase/migrations/0012_area_recommendations.sql",
+  "migrationAppliedToProduction": false,
+  "deployed": false,
+  "automatedTests": 184,
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "6a310780b6af507b1fc136b33fca3c1648c85d60a84155a2bf4ba51e89baf276"
+    },
+    {
+      "path": "HANDOVER-v0.8.15.md",
+      "sha256": "a1c4ab7390e392e529f982b4ad92ddb3de969f69dc8322b34bb881e07f5f4113"
+    },
+    {
+      "path": "README.md",
+      "sha256": "cc2dce0fe50b80860cbc2224647392933b2c7462e908e2d4a6dd578acf0c5bb7"
+    },
+    {
+      "path": "UPDATE-v0.8.15.txt",
+      "sha256": "38619757a0f0f16827a4a4b1728fa19c65ea7a69ec163aac62f4cff02561bafd"
+    },
+    {
+      "path": "UPGRADE-v0.8.15-areas-and-streets.md",
+      "sha256": "61cf82449432a072c2ae7ceafb7ba9887dd9f537adf98dc7ccd84e856df4569e"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "2765bcca2ffb051c0ea97e30fef61d8784b18e31e8ef44b8c447ae31c4a608c6"
+    },
+    {
+      "path": "package.json",
+      "sha256": "0e5d552edf4c2300d8b4b93c3a6a7f161310a13e7ac30bb3056701b0513b20d6"
+    },
+    {
+      "path": "src/components/AddPlaces.tsx",
+      "sha256": "5df1e34e29aa96bc94e823537f195e557826bf009a8e88dc905b642cbe9dea37"
+    },
+    {
+      "path": "src/components/AreaRecommendationEditor.tsx",
+      "sha256": "d084c118a3a6c79c9862453ce1b77c6523930a79d942d111821ce7216059a436"
+    },
+    {
+      "path": "src/components/CategoryChips.tsx",
+      "sha256": "2c435e5bc853d246c416a718ea4b2bc07ee2913ad2a020ed454aa34fa6771ffe"
+    },
+    {
+      "path": "src/components/Editor.tsx",
+      "sha256": "504d8c8357cf521e66ceaa1aef010814c8ea2c5bf1f1ccf027a40fdab5205cd7"
+    },
+    {
+      "path": "src/components/FirstPlace.tsx",
+      "sha256": "c8e61577144bed65f1d9ce7b95b0c59339ffffe0e74145721cb984e51cd7d36a"
+    },
+    {
+      "path": "src/components/GuideMap.tsx",
+      "sha256": "104cfda6e31b760ee3879e83dae5dbaa0913a594ba6533be469858d00c348d14"
+    },
+    {
+      "path": "src/components/PlaceRow.tsx",
+      "sha256": "5bf913514c81ab36500fb622e62d6f21a229b5747dccd69a61d120286edac16b"
+    },
+    {
+      "path": "src/components/PlaceSheet.tsx",
+      "sha256": "a0dfdc3eecd87063f482d004cf4b3e66d629e8c0a64d39713c165c4763b8ff4e"
+    },
+    {
+      "path": "src/components/PublicGuide.tsx",
+      "sha256": "d64bdf9564f0c5b0915f4c1d196e377229f7d6f3b40b2f6f5cac527205be9374"
+    },
+    {
+      "path": "src/data/demo.ts",
+      "sha256": "17add2c3ab0e2b9768d8050214dafe004b2298af4c5275a471aa89ad46a6f633"
+    },
+    {
+      "path": "src/hooks/useCloudGuideStore.ts",
+      "sha256": "62c084b030492bb3e91957a81f10a01a701293c09650fe6dcd621e3e6c6d1a1a"
+    },
+    {
+      "path": "src/hooks/useGuestGuideStore.ts",
+      "sha256": "86d4f672d73d2713b3a54c3a04cf41527f4f424a0ed15a6b4d0766d680b8f968"
+    },
+    {
+      "path": "src/hooks/useGuideStore.ts",
+      "sha256": "0f5a6960bcf74976e0bc6afbc246f7d84c63cbb6c50608a5e827b724d8730982"
+    },
+    {
+      "path": "src/i18n.tsx",
+      "sha256": "84571b9a66829a7c1c03ec9a7de8b896202bd31622c22a1dcb4d3e27a24f29cd"
+    },
+    {
+      "path": "src/services/areaRecommendations.ts",
+      "sha256": "6a15ed55830807a388b6184e56538af537241f8bc7fe27c8cd33c4446c7f8f72"
+    },
+    {
+      "path": "src/services/firstPlaceDraft.ts",
+      "sha256": "8e54737ef64caf18e4d77b51a84cb30fe366712a2ce3cc1f36d91a8f16a39ff3"
+    },
+    {
+      "path": "src/services/guestDrafts.ts",
+      "sha256": "81e2f0841335f6941f5fab0451b9a43b058ec4d44d922c8151e4d223ee97fb31"
+    },
+    {
+      "path": "src/services/guideRepository.ts",
+      "sha256": "b1fe4c022a96340f38fd251eb10771794ba7c1e244fe340ef1f75e0795de0243"
+    },
+    {
+      "path": "src/services/guideSaves.ts",
+      "sha256": "a7bdf13365b1ecb8217f3faacad0790dbb38739656902df6a9b3062efe06637f"
+    },
+    {
+      "path": "src/styles.css",
+      "sha256": "c7d993e65ef3ff3854833fdd47a7afd4ca36cee0a3d50e506ce605ffd70517d6"
+    },
+    {
+      "path": "src/types.ts",
+      "sha256": "e700d1bab53bd19b3e74ce8bbe2411ca9af6f6fec2f69fa9a8b41e282aca8ef0"
+    },
+    {
+      "path": "src/utils/guideEditing.ts",
+      "sha256": "2c4a7c569bc249973642b2b23b12539c39ba878c1fb7aefa6243cb7a874521b4"
+    },
+    {
+      "path": "src/utils/mapMarkers.ts",
+      "sha256": "04a9c10484fbb8324d9ba23ab77c7f848b0512574e8f4fb9d87bd90a15aa851a"
+    },
+    {
+      "path": "src/utils/maps.ts",
+      "sha256": "18522408d78c3d32a0f9bc6d13ba29268200e8a1a341c34f6f4f2b8319d7ecfc"
+    },
+    {
+      "path": "supabase/migrations/0012_area_recommendations.sql",
+      "sha256": "3548d6dcc6dc2cf59f37f121fde8a9105b476a9fadc18995765f9b218f742474"
+    },
+    {
+      "path": "tests/area-recommendations.test.mjs",
+      "sha256": "71e45864879468db638ff1510be0455fed1034f2bae99acfd7ad297c282f95cf"
+    },
+    {
+      "path": "tests/author-stars.test.mjs",
+      "sha256": "24cd499bae1fffca8d3a32cadeb9af51db81f647e377668b1e6c0919d0e06e08"
+    },
+    {
+      "path": "tests/database.test.mjs",
+      "sha256": "4d3d0af57fb5a508a6bdec51fda7b970f29516e6358d26735c26e3e8337abee9"
+    },
+    {
+      "path": "tests/editor-start.test.mjs",
+      "sha256": "439de1242d65bfe1df97df91af198eea5e119b3860221be607d08eff5dfd7bec"
+    },
+    {
+      "path": "tests/guide-requests.test.mjs",
+      "sha256": "eef9e5f1ed739cf4d285baa8673493c7203b6cfc52e0576c970a6e31da18ed5b"
+    },
+    {
+      "path": "tests/helpers/maplibre.mjs",
+      "sha256": "349ff0675ef3b8d8c8e98ffa4122ba7af4b7561ce421606f09e140f8a02a8fd2"
+    },
+    {
+      "path": "tests/refinement.test.mjs",
+      "sha256": "10de645e5167416b66c8e0f4a74bdb5b52d31b839c338c8217f9b8b342078471"
+    }
+  ]
+}

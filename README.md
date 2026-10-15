@@ -1,3 +1,5 @@
+Current source version: **v0.8.15**. Latest release instructions: `UPGRADE-v0.8.15-areas-and-streets.md`; latest continuity guide: `HANDOVER-v0.8.15.md`. Apply additive migration 0012 after 0011 before deploying this frontend. Credentials and dependencies are unchanged.
+
 # Anyone’s Guide v0.8.14
 
 Requesters can select a confirmed city through the existing Geoapify destination search. The invitation carries its city, country, provider result identifier and coordinates. Typed non-empty city text must be resolved before sharing; leaving the city blank remains supported.

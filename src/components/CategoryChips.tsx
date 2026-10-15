@@ -13,7 +13,7 @@ export function CategoryChips({ active, onChange, places, categories, showEmpty 
   const { t, categoryLabel } = useI18n()
   const visible = [...categories]
     .sort((a, b) => a.sortOrder - b.sortOrder)
-    .filter(category => showEmpty || category.id !== 'other' && places.some(place => place.categoryId === category.id))
+    .filter(category => (category.id !== 'areas' || places.some(place => place.categoryId === 'areas')) && (showEmpty || category.id !== 'other' && places.some(place => place.categoryId === category.id)))
   return (
     <div className="chip-row guide-chip-row" data-count={visible.length + 1} style={{ '--chip-count': visible.length + 1 } as CSSProperties} role="group" aria-label={t('guide.categories')}>
       <button className={`chip ${active === 'all' ? 'active' : ''}`} aria-pressed={active === 'all'} onClick={() => onChange('all')}>{t('category.all')}</button>

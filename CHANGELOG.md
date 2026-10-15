@@ -1,3 +1,11 @@
+## v0.8.15 (2026-10-13)
+
+- Add optional map placement beneath venue search for areas and streets, with geographic name suggestions, manual names and personal notes.
+- Show geographic recommendations in their own guide subsection and on the same map with restrained outlined markers; coordinate-based Open in Maps preserves the suggested starting spot.
+- Edit name/type/pin, retain stars and ordering, recover incomplete writing/saves, and deduplicate retries by stable manual ID in owner, guest and local flows.
+- Add migration 0012 for recommendation kind, category backfill, protected geographic edits and guest publication; preserve historical places and guides.
+- Keep walks, photos and Gemini troubleshooting out of this release.
+
 # v0.8.10. Stable preview and coordinated loading
 
 - Keep the preview map and all pins stable across list filtering; full map inherits the category and retains map filtering.

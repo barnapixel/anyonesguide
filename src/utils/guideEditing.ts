@@ -29,6 +29,10 @@ export function reorderPlaces(places: Place[], id: string, targetId: string) {
   return places.map(p => p.categoryId === source.categoryId ? normalized[categoryIndex++] : p)
 }
 
+export function withAreaCategory(guide: Guide): Guide {
+  return guide.categories.some(c => c.id === 'areas') ? guide : { ...guide, categories: [...guide.categories, { id: 'areas', label: 'Areas to explore', icon: '▦', sortOrder: 6 }] }
+}
+
 export function patchPlace(guide: Guide, id: string, patch: Partial<Place>) {
   const target = guide.places.find(p => p.id === id)
   const next = { ...patch }

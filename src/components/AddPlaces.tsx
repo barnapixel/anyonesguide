@@ -1,3 +1,7 @@
+import { lazy, Suspense } from 'react'
+import { MapPin } from 'lucide-react'
+import { loadAreaDraft } from '../services/areaRecommendations'
+const AreaRecommendationEditor = lazy(() => import('./AreaRecommendationEditor').then(m => ({ default: m.AreaRecommendationEditor })))
 import { categoryPromptKey } from '../utils/category'
 import { RecommendationImport } from './RecommendationImport'
 import { importScope, loadImportDraft } from '../services/recommendationImport'
@@ -45,6 +49,7 @@ export function AddPlaces({ guide, onNavigate, backPath, onAddSearchResult, onIm
   }
   const [query, setQuery] = useState('')
   const scope = importScope(guide, guestMode)
+  const [areaOpen, setAreaOpen] = useState(() => Boolean(loadAreaDraft(scope + ':new')?.attempted))
   const [importOpen, setImportOpen] = useState(() => Boolean(loadImportDraft(scope)?.rows.length))
   const [importBusy, setImportBusy] = useState(false)
   const importBusyRef = useRef(false)
@@ -102,6 +107,7 @@ export function AddPlaces({ guide, onNavigate, backPath, onAddSearchResult, onIm
           <input aria-label={t('common.search')} ref={inputRef} autoFocus value={query} onChange={event => setQuery(event.target.value)} placeholder={t(recent ? 'add.searchAnother' : 'add.searchFirst', { city: guide.city })} disabled={adding} />
           {query && <button onClick={() => setQuery('')} aria-label={t('common.clear')}><X size={17} /></button>}
         </div>
+        <button type="button" className="area-entry-bar" disabled={adding} onClick={() => setAreaOpen(true)}><MapPin size={18} />{t('area.entry')}</button>
         {(!guidedStart || guide.places.length >= 3) && <p className="search-hint">{t('add.searchHint', { city: guide.city })}</p>}
         {isLivePlaceSearchEnabled && <div className="search-attribution">{t('add.attribution')} <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">Geoapify</a> · © OpenStreetMap contributors</div>}
         {!isLivePlaceSearchEnabled && <div className="config-warning compact">{appConfig.cloudEnabled ? t('add.searchNotConfigured') : t('add.demo')}</div>}
@@ -158,6 +164,7 @@ export function AddPlaces({ guide, onNavigate, backPath, onAddSearchResult, onIm
           </section>
         )}
       </section>
+      {areaOpen && <Suspense fallback={<div className="area-opening" role="status">{t('common.loading')}</div>}><AreaRecommendationEditor guide={guide} scope={scope} onClose={() => setAreaOpen(false)} onSave={async (result, note) => { if (!onImportSave) throw Error('Saving unavailable'); return onImportSave(result, note, 'areas') }} onSaved={place => { setRecentId(place.id); if (returnToGuide) onNavigate(returnPath(place)) }} /></Suspense>}
     </main>
   )
 }

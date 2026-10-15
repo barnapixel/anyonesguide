@@ -1,3 +1,7 @@
+import { lazy, Suspense } from 'react'
+import { MapPin } from 'lucide-react'
+import { loadAreaDraft } from '../services/areaRecommendations'
+const AreaRecommendationEditor = lazy(() => import('./AreaRecommendationEditor').then(m => ({ default: m.AreaRecommendationEditor })))
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowLeft, Search, X } from 'lucide-react'
 import { appConfig } from '../config'
@@ -32,6 +36,7 @@ export function FirstPlace({ guide, scope, context, localOnly = false, storageUn
   const [durable, setDurable] = useState(() => !storageUnavailable && saveFirstPlaceDraft(scope, draft))
   const durableRef = useRef(durable)
   durableRef.current = durable
+  const [areaOpen, setAreaOpen] = useState(() => Boolean(loadAreaDraft(scope + ':new')?.attempted))
   const [saving, setSaving] = useState(false)
   const [importOpen, setImportOpen] = useState(() => Boolean(loadImportDraft(scope)?.rows.length))
   const { revealed, waitExpired, release } = useInitialReveal(scope, !draft.selected && !importOpen)
@@ -110,6 +115,7 @@ export function FirstPlace({ guide, scope, context, localOnly = false, storageUn
           <input ref={inputRef} type="text" inputMode="search" enterKeyHint="search" maxLength={300} value={draft.query} aria-label={t('common.search')} placeholder={t('add.searchFirst', { city: guide.city })} onChange={event => update({ query: event.target.value })} />
           {draft.query && <button type="button" className="icon-button" onClick={() => update({ query: '' })} aria-label={t('common.clear')}><X size={17} /></button>}
         </div>
+        <button type="button" className="area-entry-bar" onClick={() => setAreaOpen(true)}><MapPin size={18} />{t('area.entry')}</button>
         {isLivePlaceSearchEnabled && <div className="search-attribution">{t('add.attribution')} <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">Geoapify</a> · © OpenStreetMap contributors</div>}
         {!isLivePlaceSearchEnabled && <div className="config-warning compact">{appConfig.cloudEnabled ? t('add.searchNotConfigured') : t('add.demo')}</div>}
         {loading && <p className="search-status" role="status">{t('add.searching')}</p>}
@@ -138,5 +144,6 @@ export function FirstPlace({ guide, scope, context, localOnly = false, storageUn
       {(!durable || storageUnavailable) && <p className="status-message error" role="alert">{t('first.storageWarning')}</p>}
       {localOnly && durable && !storageUnavailable && <p className="first-place-privacy">{t('first.localDraft')}</p>}
     </section>
+    {areaOpen && <Suspense fallback={<div className="area-opening" role="status">{t('common.loading')}</div>}><AreaRecommendationEditor guide={guide} scope={scope} onClose={() => setAreaOpen(false)} onSave={onSave} onSaved={place => { clearFirstPlaceDraft(scope); onSaved(place) }} /></Suspense>}
   </main>
 }

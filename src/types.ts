@@ -1,3 +1,4 @@
+export type RecommendationKind = 'venue' | 'area' | 'street'
 export type CategoryId = string
 export type GuideVisibility = 'draft' | 'unlisted' | 'public'
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -15,6 +16,7 @@ export type Place = {
   guidePlaceId?: string
   externalId?: string
   provider?: string
+  recommendationKind?: RecommendationKind
   name: string
   subtitle?: string
   address: string
@@ -95,6 +97,7 @@ export type PlaceSearchResult = {
   lng: number
   sourceCategory?: string
   provider?: string
+  recommendationKind?: RecommendationKind
 }
 
 export type DestinationSearchResult = {

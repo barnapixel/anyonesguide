@@ -209,7 +209,7 @@ export function PublicGuide({ guide, userLocation, locationStatus, onRequestLoca
           {filtered.some(p => p.isStarred) && <p className="author-picks-key"><span className="copy-emote" aria-hidden="true">🔥</span><span>{t('star.legend')}</span></p>}
           {grouped.map(group => (
             <div className="category-section" key={group.id}>
-              <h2>{categoryLabel(group)} <span>· {group.places.length}</span></h2>
+              <h2>{group.id === 'areas' ? t('area.section') : categoryLabel(group)} <span>· {group.places.length}</span></h2>
               <div className="place-list">
                 {group.places.map(place => <PlaceRow key={place.id} place={place} category={group} city={guide.city} country={guide.country} userLocation={userLocation} onClick={() => openPlace(place)} />)}
               </div>

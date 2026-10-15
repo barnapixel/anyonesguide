@@ -18,10 +18,12 @@ function categorySvg(categoryId: string) {
 
 export function createPlaceMarkerElement(place: Place, selected: boolean, onSelectPlace: (place: Place) => void, starLabel: string) {
   const button = document.createElement('button')
-  button.className = `map-pin ${place.isStarred ? 'starred' : ''} ${selected ? 'selected' : ''}`
+  const areaKind = place.recommendationKind === 'area' || place.recommendationKind === 'street' ? place.recommendationKind : null
+  button.className = `map-pin ${areaKind ? 'map-pin-area ' + 'map-pin-' + areaKind : ''} ${place.isStarred ? 'starred' : ''} ${selected ? 'selected' : ''}`
   button.type = 'button'
   button.setAttribute('aria-label', place.isStarred ? `${place.name}. ${starLabel}` : place.name)
-  button.innerHTML = categorySvg(place.categoryId) + (place.isStarred ? '<span class="map-author-star" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.2-6.2 3.2 1.2-6.8-5-4.9 6.9-1Z"/></svg></span>' : '')
+  const areaIcon = areaKind === 'street' ? '<path d="M5 3 2 21M19 3l3 18M12 3v4m0 5v3m0 4v2"/>' : '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'
+  button.innerHTML = (areaKind ? `<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${areaIcon}</svg>` : categorySvg(place.categoryId)) + (place.isStarred ? '<span class="map-author-star" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.2-6.2 3.2 1.2-6.8-5-4.9 6.9-1Z"/></svg></span>' : '')
   button.onclick = () => onSelectPlace(place)
   return button
 }
